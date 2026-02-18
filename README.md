@@ -31,7 +31,16 @@ OPENAI_API_KEY=sk-xxx
 DATABASE_URL=sqlite:///bautagebuch.db
 PDF_OUTPUT_DIR=./output
 UPLOAD_DIR=./uploads
+
+# Passwort-Schutz (empfohlen!)
+BOT_PASSWORT=DeinBotPasswort
+DASHBOARD_USER=admin
+DASHBOARD_PASSWORT=DeinDashboardPasswort
 ```
+
+> **Ohne `BOT_PASSWORT`** kann jeder, der den Bot auf Telegram findet, ihn nutzen.
+> **Ohne `DASHBOARD_PASSWORT`** ist das Web-Dashboard offen zugänglich.
+> Beide leer lassen = kein Schutz (nur für lokale Tests).
 
 ### 4. Bot + Dashboard starten
 
@@ -229,9 +238,35 @@ bautagebuch/
 ├── output/                  # Generierte PDF-Berichte
 ├── config.py                # Konfiguration aus .env
 ├── run.py                   # Launcher: Bot + Dashboard gleichzeitig
+├── Dockerfile               # Docker-Image für Deployment
+├── docker-compose.yml       # Docker Compose Konfiguration
+├── DEPLOYMENT.md            # Ausführliche VPS-Deployment-Anleitung
 ├── requirements.txt
-├── .env                     # API Keys (nicht im Git!)
+├── .env                     # API Keys & Passwörter (nicht im Git!)
 └── .gitignore
+```
+
+---
+
+## Passwort-Schutz
+
+### Telegram Bot
+Setze `BOT_PASSWORT` in der `.env`. Neue Benutzer müssen beim `/start` das Passwort eingeben, bevor sie sich registrieren können. 3 Fehlversuche → Zugang gesperrt. Die Passwort-Nachricht wird automatisch gelöscht.
+
+Bereits registrierte Benutzer sind nicht betroffen.
+
+### Web-Dashboard
+Setze `DASHBOARD_USER` und `DASHBOARD_PASSWORT` in der `.env`. Das Dashboard ist per HTTP Basic Auth geschützt – der Browser fragt automatisch nach Zugangsdaten.
+
+---
+
+## Deployment auf VPS
+
+Siehe **[DEPLOYMENT.md](DEPLOYMENT.md)** für eine ausführliche Schritt-für-Schritt-Anleitung:
+- Docker-Deployment (empfohlen)
+- Direktes Deployment mit systemd
+- Domain + HTTPS einrichten
+- Firewall, Backups, Sicherheit
 ```
 
 ---

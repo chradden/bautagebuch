@@ -1,0 +1,17 @@
+services:
+  app:
+    build: .
+    container_name: instandhaltung
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data/bautagebuch.db:/app/bautagebuch.db
+      - ./data/uploads:/app/uploads
+      - ./data/output:/app/output
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:///bautagebuch.db
+      - PDF_OUTPUT_DIR=./output
+      - UPLOAD_DIR=./uploads

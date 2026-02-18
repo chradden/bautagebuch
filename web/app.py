@@ -2,17 +2,21 @@
 import os
 import csv
 import io
+import secrets
 from datetime import date, datetime
-from fastapi import FastAPI, Request, Query
-from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
+from fastapi import FastAPI, Request, Query, Depends, HTTPException, status
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from sqlalchemy import func
 
+import config
 from db.database import get_session
 from db.models import Projekt, Benutzer, Eintrag, Foto, Tagesbericht
 
 app = FastAPI(title="Instandhaltungsplanung Dashboard")
+security = HTTPBasic()
 
 # Static files & templates
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
@@ -22,6 +26,31 @@ os.makedirs(STATIC_DIR, exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory=TEMPLATE_DIR)
+
+
+# ─── Auth ─────────────────────────────────────────────────────────────────
+
+def auth_pruefen(credentials: HTTPBasicCredentials = Depends(security)):
+    """Prüft HTTP Basic Auth, wenn DASHBOARD_PASSWORT gesetzt ist."""
+    if not config.DASHBOARD_PASSWORT:
+        return True  # Kein Schutz konfiguriert
+
+    korrekt_user = secrets.compare_digest(
+        credentials.username.encode("utf-8"),
+        config.DASHBOARD_USER.encode("utf-8"),
+    )
+    korrekt_pw = secrets.compare_digest(
+        credentials.password.encode("utf-8"),
+        config.DASHBOARD_PASSWORT.encode("utf-8"),
+    )
+
+    if not (korrekt_user and korrekt_pw):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Falscher Benutzername oder Passwort",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return True
 
 # ─── Hilfsfunktionen ─────────────────────────────────────────────────────
 
@@ -47,7 +76,7 @@ def _parse_ki_zusammenfassung(text: str) -> dict:
 # ─── Routen ───────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request):
+async def dashboard(request: Request, auth=Depends(auth_pruefen)):
     """Hauptseite – Projektübersicht mit Statistiken."""
     with get_session() as session:
         projekte = session.query(Projekt).all()
@@ -110,6 +139,7 @@ async def projekt_detail(
     datum: str = Query(None, description="Filter: TT.MM.JJJJ"),
     prio: str = Query(None, description="Filter: rot|gelb|gruen"),
     kategorie: str = Query(None, description="Filter: Kategorie"),
+    auth=Depends(auth_pruefen),
 ):
     """Detailansicht eines Projekts mit Einträgen."""
     filter_datum = None
@@ -207,7 +237,7 @@ async def projekt_detail(
 
 
 @app.get("/bericht/{bericht_id}/download")
-async def bericht_download(bericht_id: int):
+async def bericht_download(bericht_id: int, auth=Depends(auth_pruefen)):
     """PDF-Tagesbericht herunterladen."""
     with get_session() as session:
         bericht = session.query(Tagesbericht).get(bericht_id)
@@ -226,7 +256,7 @@ async def bericht_download(bericht_id: int):
 
 
 @app.get("/foto/{foto_id}")
-async def foto_anzeigen(foto_id: int):
+async def foto_anzeigen(foto_id: int, auth=Depends(auth_pruefen)):
     """Foto anzeigen."""
     with get_session() as session:
         foto = session.query(Foto).get(foto_id)
@@ -245,6 +275,7 @@ async def foto_anzeigen(foto_id: int):
 async def export_csv(
     projekt_id: int,
     datum: str = Query(None),
+    auth=Depends(auth_pruefen),
 ):
     """Exportiert Einträge als CSV."""
     filter_datum = None
@@ -298,7 +329,7 @@ async def export_csv(
 
 
 @app.get("/api/stats/{projekt_id}")
-async def api_stats(projekt_id: int):
+async def api_stats(projekt_id: int, auth=Depends(auth_pruefen)):
     """JSON-API: Statistiken für ein Projekt."""
     with get_session() as session:
         gesamt = session.query(Eintrag).filter_by(projekt_id=projekt_id).count()
