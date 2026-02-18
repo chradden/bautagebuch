@@ -1,0 +1,518 @@
+/* ─── Instandhaltungsplanung – Dashboard CSS ─── */
+
+:root {
+    --primary: #2c3e50;
+    --primary-light: #34495e;
+    --accent: #3498db;
+    --danger: #e74c3c;
+    --warning: #f1c40f;
+    --success: #27ae60;
+    --bg: #f5f6fa;
+    --card-bg: #ffffff;
+    --text: #333;
+    --text-muted: #888;
+    --border: #e1e5eb;
+    --radius: 8px;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ─── Layout ─── */
+
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
+    width: 100%;
+}
+
+main.container {
+    flex: 1;
+    padding-top: 20px;
+    padding-bottom: 40px;
+}
+
+/* ─── Navbar ─── */
+
+.navbar {
+    background: var(--primary);
+    color: white;
+    padding: 14px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.navbar .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    color: white;
+    text-decoration: none;
+    font-size: 1.2em;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+}
+
+.nav-info {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.9em;
+}
+
+/* ─── Page Header ─── */
+
+.page-header {
+    margin-bottom: 24px;
+}
+
+.page-header h1 {
+    font-size: 1.8em;
+    color: var(--primary);
+    margin-bottom: 4px;
+}
+
+.subtitle {
+    color: var(--text-muted);
+    font-size: 0.95em;
+}
+
+.header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* ─── Cards Grid ─── */
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+}
+
+.card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    transition: transform 0.15s, box-shadow 0.15s;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    border: 1px solid var(--border);
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.card-header h2 {
+    font-size: 1.2em;
+    color: var(--primary);
+}
+
+.card-meta {
+    font-size: 0.85em;
+    color: var(--text-muted);
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.card-stats {
+    display: flex;
+    gap: 20px;
+    padding: 12px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+}
+
+.stat {
+    text-align: center;
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 1.5em;
+    font-weight: 700;
+    color: var(--primary);
+    display: block;
+}
+
+.stat-label {
+    font-size: 0.75em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.card-recent h4 {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.recent-entry {
+    font-size: 0.85em;
+    padding: 3px 0;
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+}
+
+.re-date { color: var(--text-muted); font-size: 0.85em; white-space: nowrap; }
+.re-kat { 
+    background: #ecf0f1; 
+    padding: 1px 6px; 
+    border-radius: 3px; 
+    font-size: 0.8em; 
+    white-space: nowrap;
+}
+.re-text { 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    white-space: nowrap; 
+    flex: 1;
+}
+
+/* ─── Badge ─── */
+
+.badge {
+    background: var(--accent);
+    color: white;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ─── Filter Bar ─── */
+
+.filter-bar {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    margin-bottom: 20px;
+}
+
+.filter-form {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-group label {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.filter-group select {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.9em;
+    background: white;
+    min-width: 160px;
+}
+
+/* ─── Tabs ─── */
+
+.tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 2px solid var(--border);
+}
+
+.tab {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.95em;
+    color: var(--text-muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.tab:hover { color: var(--primary); }
+
+.tab.active {
+    color: var(--primary);
+    font-weight: 600;
+    border-bottom-color: var(--accent);
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ─── Eintrag-Karte ─── */
+
+.eintrag-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    transition: box-shadow 0.15s;
+}
+
+.eintrag-card:hover {
+    box-shadow: var(--shadow);
+}
+
+.eintrag-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.eintrag-meta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.eintrag-datum {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.eintrag-zeit {
+    color: var(--text-muted);
+    font-size: 0.9em;
+}
+
+.eintrag-typ {
+    font-size: 0.8em;
+    padding: 1px 8px;
+    border-radius: 3px;
+    background: #ecf0f1;
+}
+
+.kategorie-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 3px;
+    font-size: 0.8em;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.kat-reparatur { background: #fff3e0; color: #e65100; }
+.kat-maengelbeseitigung { background: #fce4ec; color: #c62828; }
+.kat-wartung { background: #e8f5e9; color: #2e7d32; }
+.kat-pruefung { background: #e3f2fd; color: #1565c0; }
+.kat-sicherheit { background: #ffebee; color: #b71c1c; }
+.kat-sonstiges { background: #ecf0f1; color: #546e7a; }
+
+.eintrag-text {
+    font-size: 1em;
+    line-height: 1.5;
+    margin-bottom: 6px;
+}
+
+.ki-zusammenfassung {
+    background: #f0f7ff;
+    border-left: 3px solid var(--accent);
+    padding: 6px 12px;
+    font-size: 0.9em;
+    color: #555;
+    border-radius: 0 4px 4px 0;
+    margin-top: 8px;
+}
+
+.ki-label {
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.eintrag-fotos {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.foto-thumb img {
+    width: 120px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+}
+
+.foto-desc {
+    display: block;
+    font-size: 0.75em;
+    color: var(--text-muted);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ─── Berichte ─── */
+
+.berichte-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.bericht-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bericht-datum {
+    font-weight: 600;
+}
+
+/* ─── Buttons ─── */
+
+.btn {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: background 0.15s;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: white;
+}
+
+.btn-primary:hover { background: #2980b9; }
+
+.btn-secondary {
+    background: #ecf0f1;
+    color: var(--primary);
+}
+
+.btn-secondary:hover { background: #d5dbdb; }
+
+.btn-small {
+    padding: 4px 10px;
+    font-size: 0.8em;
+    background: #fee;
+    color: var(--danger);
+    text-decoration: none;
+    border-radius: 3px;
+    align-self: flex-end;
+}
+
+/* ─── Empty State ─── */
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+
+.empty-icon {
+    font-size: 3em;
+    margin-bottom: 10px;
+}
+
+.empty-state h2 {
+    color: var(--primary-light);
+    margin-bottom: 6px;
+}
+
+.empty-state code {
+    background: #ecf0f1;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+/* ─── Footer ─── */
+
+.footer {
+    background: var(--primary);
+    color: rgba(255,255,255,0.6);
+    padding: 16px 0;
+    font-size: 0.85em;
+    margin-top: auto;
+}
+
+.footer .container {
+    display: flex;
+    justify-content: space-between;
+}
+
+/* ─── Prio-Badges (auch im Dashboard) ─── */
+
+.prio-rot { background: var(--danger); color: white; font-weight: bold; }
+.prio-gelb { background: var(--warning); color: #333; font-weight: bold; }
+.prio-gruen { background: var(--success); color: white; }
+
+.text-muted { color: var(--text-muted); font-style: italic; }
+
+/* ─── Responsive ─── */
+
+@media (max-width: 700px) {
+    .cards-grid { grid-template-columns: 1fr; }
+    .card-stats { gap: 10px; }
+    .filter-form { flex-direction: column; }
+    .header-row { flex-direction: column; }
+    .eintrag-header { flex-direction: column; align-items: flex-start; }
+}

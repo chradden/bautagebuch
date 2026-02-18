@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ titel }} – Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo">🔧 {{ titel }}</a>
+            <span class="nav-info">Web-Dashboard</span>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <h1>Objektübersicht</h1>
+            <p class="subtitle">{{ projekte | length }} Objekt{{ 'e' if projekte | length != 1 else '' }} registriert</p>
+        </div>
+
+        {% if not projekte %}
+        <div class="empty-state">
+            <div class="empty-icon">🏗️</div>
+            <h2>Noch keine Objekte</h2>
+            <p>Erstelle ein Objekt im Telegram-Bot mit <code>/projekt &lt;Name&gt;</code></p>
+        </div>
+        {% endif %}
+
+        <div class="cards-grid">
+            {% for p in projekte %}
+            <a href="/projekt/{{ p.id }}" class="card projekt-card">
+                <div class="card-header">
+                    <h2>{{ p.name }}</h2>
+                    <span class="badge">{{ p.anzahl_eintraege }} Meldungen</span>
+                </div>
+                <div class="card-meta">
+                    <span>📍 {{ p.adresse }}</span>
+                    {% if p.baubeginn != '–' %}
+                    <span>📅 seit {{ p.baubeginn }}</span>
+                    {% endif %}
+                </div>
+                <div class="card-stats">
+                    <div class="stat">
+                        <span class="stat-value">{{ p.anzahl_eintraege }}</span>
+                        <span class="stat-label">Meldungen</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">{{ p.anzahl_fotos }}</span>
+                        <span class="stat-label">Fotos</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">{{ p.anzahl_berichte }}</span>
+                        <span class="stat-label">Berichte</span>
+                    </div>
+                </div>
+                {% if p.letzte_eintraege %}
+                <div class="card-recent">
+                    <h4>Letzte Meldungen</h4>
+                    {% for e in p.letzte_eintraege %}
+                    <div class="recent-entry">
+                        <span class="re-date">{{ e.datum }} {{ e.uhrzeit }}</span>
+                        <span class="re-kat">{{ e.kategorie }}</span>
+                        <span class="re-text">{{ e.rohinhalt }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <span>Instandhaltungsplanung – Web-Dashboard</span>
+            <span>Powered by KI 🤖</span>
+        </div>
+    </footer>
+</body>
+</html>

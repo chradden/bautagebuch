@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ projekt.name }} – Instandhaltungsplanung</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo">🔧 Instandhaltungsplanung</a>
+            <span class="nav-info">{{ projekt.name }}</span>
+        </div>
+    </nav>
+
+    <main class="container">
+        <!-- Projekt-Header -->
+        <div class="page-header">
+            <div class="header-row">
+                <div>
+                    <h1>{{ projekt.name }}</h1>
+                    <p class="subtitle">
+                        📍 {{ projekt.adresse }}
+                        {% if projekt.bauherr != '–' %} · 👤 {{ projekt.bauherr }}{% endif %}
+                        {% if projekt.baubeginn != '–' %} · 📅 seit {{ projekt.baubeginn }}{% endif %}
+                    </p>
+                </div>
+                <div class="header-actions">
+                    <a href="/export/{{ projekt.id }}/csv{% if filter_datum %}?datum={{ filter_datum }}{% endif %}" 
+                       class="btn btn-secondary">📥 CSV-Export</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter -->
+        <div class="filter-bar">
+            <form method="get" action="/projekt/{{ projekt.id }}" class="filter-form">
+                <div class="filter-group">
+                    <label for="datum">📅 Datum</label>
+                    <select name="datum" id="datum" onchange="this.form.submit()">
+                        <option value="">Alle Tage</option>
+                        {% for d in verfuegbare_daten %}
+                        <option value="{{ d }}" {{ 'selected' if filter_datum == d }}>{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="kategorie">📂 Kategorie</label>
+                    <select name="kategorie" id="kategorie" onchange="this.form.submit()">
+                        <option value="">Alle</option>
+                        {% for k in verfuegbare_kategorien %}
+                        <option value="{{ k }}" {{ 'selected' if filter_kategorie == k }}>
+                            {{ kat_emoji.get(k, '📝') }} {{ k | replace('ae', 'ä') | title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% if filter_datum or filter_kategorie %}
+                <a href="/projekt/{{ projekt.id }}" class="btn btn-small">✕ Filter zurücksetzen</a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('eintraege')">
+                📋 Meldungen ({{ eintraege | length }})
+            </button>
+            <button class="tab" onclick="showTab('berichte')">
+                📄 Berichte ({{ berichte | length }})
+            </button>
+        </div>
+
+        <!-- Einträge-Tab -->
+        <div id="tab-eintraege" class="tab-content active">
+            {% if not eintraege %}
+            <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <h2>Keine Meldungen</h2>
+                <p>Sende Meldungen über den Telegram-Bot.</p>
+            </div>
+            {% endif %}
+
+            {% for e in eintraege %}
+            <div class="eintrag-card">
+                <div class="eintrag-header">
+                    <div class="eintrag-meta">
+                        <span class="eintrag-datum">{{ e.datum }}</span>
+                        <span class="eintrag-zeit">{{ e.uhrzeit }}</span>
+                        <span class="eintrag-typ typ-{{ e.typ }}">
+                            {% if e.typ == 'text' %}💬{% elif e.typ == 'foto' %}📷{% elif e.typ == 'sprache' %}🎤{% endif %}
+                            {{ e.typ | title }}
+                        </span>
+                    </div>
+                    {% if e.kategorie %}
+                    <span class="kategorie-badge kat-{{ e.kategorie }}">
+                        {{ kat_emoji.get(e.kategorie, '📝') }} {{ e.kategorie | replace('ae', 'ä') | title }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="eintrag-body">
+                    <p class="eintrag-text">{{ e.rohinhalt }}</p>
+                    {% if e.ki_zusammenfassung %}
+                    <div class="ki-zusammenfassung">
+                        <span class="ki-label">🤖 KI:</span> {{ e.ki_zusammenfassung }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if e.fotos %}
+                <div class="eintrag-fotos">
+                    {% for foto in e.fotos %}
+                    <div class="foto-thumb">
+                        <img src="/foto/{{ foto.id }}"
+                             alt="Foto" loading="lazy"
+                             onerror="this.style.display='none'">
+                        {% if foto.beschreibung %}
+                        <span class="foto-desc">{{ foto.beschreibung[:80] }}</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Berichte-Tab -->
+        <div id="tab-berichte" class="tab-content">
+            {% if not berichte %}
+            <div class="empty-state">
+                <div class="empty-icon">📄</div>
+                <h2>Noch keine Berichte</h2>
+                <p>Erstelle einen Bericht im Telegram-Bot mit <code>/bericht</code></p>
+            </div>
+            {% endif %}
+
+            <div class="berichte-list">
+                {% for b in berichte %}
+                <div class="bericht-card">
+                    <div class="bericht-info">
+                        <span class="bericht-datum">📅 {{ b.datum }}</span>
+                    </div>
+                    {% if b.hat_pdf %}
+                    <a href="/bericht/{{ b.id }}/download" class="btn btn-primary">
+                        📥 PDF herunterladen
+                    </a>
+                    {% else %}
+                    <span class="text-muted">PDF nicht verfügbar</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <span>Instandhaltungsplanung – Web-Dashboard</span>
+            <span>Powered by KI 🤖</span>
+        </div>
+    </footer>
+
+    <script>
+        function showTab(name) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>
