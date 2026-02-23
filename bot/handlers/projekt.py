@@ -158,7 +158,7 @@ async def hilfe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🟡 GELB = Zeitnah beheben\n"
         "🟢 GRÜN = Kann geplant werden\n\n"
         "💰 Kostenschätzung wird automatisch erstellt.\n\n"
-        "🌐 **Web-Dashboard:** http://localhost:8080",
+        "🌐 **Web-Dashboard:** http://localhost:8090",
         parse_mode="Markdown"
     )
 

@@ -24,7 +24,7 @@ COPY . .
 RUN mkdir -p output uploads
 
 # Port für Web-Dashboard
-EXPOSE 8080
+EXPOSE 8090
 
 # Launcher starten (Bot + Dashboard)
 CMD ["python3", "run.py"]
