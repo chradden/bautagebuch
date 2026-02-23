@@ -1,11 +1,10 @@
 """Launcher – Startet Telegram-Bot und Web-Dashboard gleichzeitig."""
-import asyncio
 import threading
 import logging
 import uvicorn
 
+import config
 from db.database import init_db
-from bot.main import main as bot_main
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -31,14 +30,19 @@ def main():
     logger.info("=== Instandhaltungsplanung – Systemstart ===")
     init_db()
 
-    # Web-Dashboard in separatem Thread starten
-    web_thread = threading.Thread(target=start_web_dashboard, daemon=True)
-    web_thread.start()
-    logger.info("Web-Dashboard gestartet (Port 8090)")
+    if config.BOT_AKTIV:
+        # Web-Dashboard in separatem Thread starten, Bot im Hauptthread
+        web_thread = threading.Thread(target=start_web_dashboard, daemon=True)
+        web_thread.start()
+        logger.info("Web-Dashboard gestartet (Port 8090)")
 
-    # Telegram-Bot im Hauptthread starten (blockiert)
-    logger.info("Starte Telegram-Bot...")
-    bot_main()
+        logger.info("Starte Telegram-Bot...")
+        from bot.main import main as bot_main
+        bot_main()
+    else:
+        # Nur Dashboard – kein Bot (z.B. im Codespace/Entwicklung)
+        logger.info("BOT_AKTIV=false → nur Web-Dashboard wird gestartet (kein Telegram-Bot)")
+        start_web_dashboard()  # blockiert
 
 
 if __name__ == "__main__":

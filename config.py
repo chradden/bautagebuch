@@ -13,3 +13,6 @@ UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads")
 BOT_PASSWORT = os.getenv("BOT_PASSWORT", "")  # Leer = kein Schutz
 DASHBOARD_USER = os.getenv("DASHBOARD_USER", "admin")
 DASHBOARD_PASSWORT = os.getenv("DASHBOARD_PASSWORT", "")  # Leer = kein Schutz
+
+# Bot-Steuerung: false = nur Dashboard starten (z.B. im Codespace)
+BOT_AKTIV = os.getenv("BOT_AKTIV", "true").lower() == "true"
