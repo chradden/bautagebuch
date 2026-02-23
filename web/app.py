@@ -3,9 +3,10 @@ import os
 import csv
 import io
 import secrets
+import logging
 from datetime import date, datetime
-from fastapi import FastAPI, Request, Query, Depends, HTTPException, status
-from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, Response
+from fastapi import FastAPI, Request, Query, Form, Depends, HTTPException, status
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, Response, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -14,6 +15,10 @@ from sqlalchemy import func
 import config
 from db.database import get_session
 from db.models import Projekt, Benutzer, Eintrag, Foto, Tagesbericht
+from core.pdf import generiere_pdf
+from core.ki import generiere_bericht_text
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Instandhaltungsplanung Dashboard")
 security = HTTPBasic()
@@ -139,6 +144,8 @@ async def projekt_detail(
     datum: str = Query(None, description="Filter: TT.MM.JJJJ"),
     prio: str = Query(None, description="Filter: rot|gelb|gruen"),
     kategorie: str = Query(None, description="Filter: Kategorie"),
+    fehler: str = Query(None),
+    erfolg: str = Query(None),
     auth=Depends(auth_pruefen),
 ):
     """Detailansicht eines Projekts mit Einträgen."""
@@ -233,7 +240,140 @@ async def projekt_detail(
         "filter_datum": datum or "",
         "filter_kategorie": kategorie or "",
         "kat_emoji": KATEGORIE_EMOJI,
+        "fehler": fehler or "",
+        "erfolg": erfolg or "",
     })
+
+
+@app.post("/bericht/{projekt_id}/generieren")
+async def bericht_generieren(
+    projekt_id: int,
+    datum: str = Form(...),
+    auth=Depends(auth_pruefen),
+):
+    """Generiert einen PDF-Tagesbericht über das Dashboard."""
+    # Datum parsen
+    try:
+        berichtsdatum = datetime.strptime(datum, "%d.%m.%Y").date()
+    except ValueError:
+        try:
+            berichtsdatum = datetime.strptime(datum, "%Y-%m-%d").date()
+        except ValueError:
+            return HTMLResponse("<h1>Ungültiges Datum</h1>", status_code=400)
+
+    with get_session() as session:
+        projekt = session.query(Projekt).get(projekt_id)
+        if not projekt:
+            return HTMLResponse("<h1>Projekt nicht gefunden</h1>", status_code=404)
+
+        projekt_name = projekt.name
+
+        # Einträge für dieses Datum laden
+        eintraege = (
+            session.query(Eintrag)
+            .filter_by(projekt_id=projekt_id, datum=berichtsdatum)
+            .order_by(Eintrag.uhrzeit)
+            .all()
+        )
+
+        if not eintraege:
+            return RedirectResponse(
+                url=f"/projekt/{projekt_id}?fehler=keine_eintraege&datum={datum}",
+                status_code=303,
+            )
+
+        # Daten aus Session extrahieren
+        eintraege_daten = []
+        for e in eintraege:
+            foto_beschreibungen = [f.beschreibung for f in e.fotos if f.beschreibung]
+            eintraege_daten.append({
+                "typ": e.typ,
+                "uhrzeit": e.uhrzeit.strftime("%H:%M") if e.uhrzeit else "",
+                "rohinhalt": e.rohinhalt or "",
+                "kategorie": e.kategorie or "sonstiges",
+                "ki_zusammenfassung": e.ki_zusammenfassung or "",
+                "prioritaet": e.prioritaet or "gelb",
+                "kostenschaetzung": e.kostenschaetzung or "",
+                "foto_beschreibungen": foto_beschreibungen,
+            })
+
+        foto_daten = []
+        for e in eintraege:
+            for f in e.fotos:
+                beschreibung = f.beschreibung or e.rohinhalt or ""
+                foto_daten.append({
+                    "dateipfad": f.dateipfad,
+                    "beschreibung": beschreibung,
+                    "uhrzeit": e.uhrzeit,
+                })
+
+        # Tagesbericht-Eintrag in DB
+        tb = (
+            session.query(Tagesbericht)
+            .filter_by(projekt_id=projekt_id, datum=berichtsdatum)
+            .first()
+        )
+        if not tb:
+            tb = Tagesbericht(projekt_id=projekt_id, datum=berichtsdatum)
+            session.add(tb)
+            session.commit()
+
+    # KI-Zusammenfassung generieren
+    logger.info(f"Generiere Bericht für Projekt {projekt_id}, Datum {berichtsdatum}")
+    ki_bericht = generiere_bericht_text(eintraege_daten)
+
+    # View-Objekte für PDF-Template
+    class EintragView:
+        def __init__(self, d):
+            self.uhrzeit = d["uhrzeit"]
+            self.rohinhalt = d["rohinhalt"]
+            self.kategorie = d["kategorie"]
+            self.ki_zusammenfassung = d["ki_zusammenfassung"]
+            self.prioritaet = d.get("prioritaet", "gelb")
+            self.kostenschaetzung = d.get("kostenschaetzung", "")
+            self.uhrzeit_str = d["uhrzeit"]
+
+    class FotoView:
+        def __init__(self, d):
+            self.dateipfad = d["dateipfad"]
+            self.beschreibung = d["beschreibung"]
+            self.uhrzeit = d["uhrzeit"]
+
+    eintraege_text = [EintragView(e) for e in eintraege_daten if e["typ"] in ("text", "foto", "sprache")]
+    fotos = [FotoView(f) for f in foto_daten]
+
+    # Bauleiter — für Web-Berichte unbekannt, daher "Dashboard"
+    bauleiter_name = "Dashboard-Benutzer"
+
+    # PDF generieren
+    try:
+        pdf_pfad = generiere_pdf(
+            projekt_name=projekt_name,
+            bauleiter_name=bauleiter_name,
+            datum=berichtsdatum,
+            eintraege_text=eintraege_text,
+            fotos=fotos,
+            ki_bericht=ki_bericht,
+        )
+    except Exception as e:
+        logger.error(f"PDF-Erstellung fehlgeschlagen: {e}")
+        return HTMLResponse(f"<h1>Fehler bei PDF-Erstellung</h1><p>{e}</p>", status_code=500)
+
+    # PDF-Pfad in DB speichern
+    with get_session() as session:
+        tb = (
+            session.query(Tagesbericht)
+            .filter_by(projekt_id=projekt_id, datum=berichtsdatum)
+            .first()
+        )
+        if tb:
+            tb.pdf_pfad = pdf_pfad
+
+    logger.info(f"Bericht erstellt: {pdf_pfad}")
+    return RedirectResponse(
+        url=f"/projekt/{projekt_id}?erfolg=bericht_erstellt&datum={datum}",
+        status_code=303,
+    )
 
 
 @app.get("/bericht/{bericht_id}/download")

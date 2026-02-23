@@ -129,11 +129,41 @@
 
         <!-- Berichte-Tab -->
         <div id="tab-berichte" class="tab-content">
+            <!-- Bericht erstellen -->
+            <div class="bericht-erstellen-card">
+                <h3>📄 Neuen Bericht erstellen</h3>
+                <form method="post" action="/bericht/{{ projekt.id }}/generieren" class="bericht-form" id="berichtForm">
+                    <div class="form-row">
+                        <div class="filter-group">
+                            <label for="bericht_datum">📅 Datum wählen</label>
+                            <select name="datum" id="bericht_datum" required>
+                                {% for d in verfuegbare_daten %}
+                                <option value="{{ d }}">{{ d }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-generate" id="btnGenerate">
+                            🤖 Bericht generieren
+                        </button>
+                    </div>
+                </form>
+                {% if fehler == 'keine_eintraege' %}
+                <div class="alert alert-warning">
+                    ⚠️ Keine Einträge für dieses Datum vorhanden.
+                </div>
+                {% endif %}
+                {% if erfolg == 'bericht_erstellt' %}
+                <div class="alert alert-success">
+                    ✅ Bericht wurde erfolgreich erstellt!
+                </div>
+                {% endif %}
+            </div>
+
             {% if not berichte %}
             <div class="empty-state">
-                <div class="empty-icon">📄</div>
+                <div class="empty-icon">📋</div>
                 <h2>Noch keine Berichte</h2>
-                <p>Erstelle einen Bericht im Telegram-Bot mit <code>/bericht</code></p>
+                <p>Wähle oben ein Datum und klicke auf "Bericht generieren".</p>
             </div>
             {% endif %}
 
@@ -170,6 +200,19 @@
             document.getElementById('tab-' + name).classList.add('active');
             event.target.classList.add('active');
         }
+
+        // Bericht-Generierung: Ladeindikator
+        document.getElementById('berichtForm').addEventListener('submit', function() {
+            var btn = document.getElementById('btnGenerate');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Bericht wird erstellt...';
+            btn.classList.add('btn-loading');
+        });
+
+        // Bei erfolg/fehler: Berichte-Tab öffnen
+        {% if erfolg or fehler %}
+        showTab('berichte');
+        {% endif %}
     </script>
 </body>
 </html>

@@ -507,6 +507,58 @@ main.container {
 
 .text-muted { color: var(--text-muted); font-style: italic; }
 
+/* ─── Bericht erstellen ─── */
+
+.bericht-erstellen-card {
+    background: var(--card-bg);
+    border: 2px dashed var(--accent);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+}
+
+.bericht-erstellen-card h3 {
+    margin-bottom: 14px;
+    color: var(--primary);
+}
+
+.bericht-form .form-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.btn-generate {
+    padding: 10px 24px !important;
+    font-size: 1em !important;
+    white-space: nowrap;
+}
+
+.btn-loading {
+    opacity: 0.7;
+    cursor: wait !important;
+}
+
+.alert {
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    margin-top: 12px;
+    font-size: 0.95em;
+}
+
+.alert-warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffc107;
+}
+
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #28a745;
+}
+
 /* ─── Responsive ─── */
 
 @media (max-width: 700px) {
