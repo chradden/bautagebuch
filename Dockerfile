@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
 COPY . .
 
 # Verzeichnisse erstellen
-RUN mkdir -p output uploads
+RUN mkdir -p data/output data/uploads
 
 # Port für Web-Dashboard
 EXPOSE 8090

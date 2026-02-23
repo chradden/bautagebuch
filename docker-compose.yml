@@ -6,12 +6,10 @@ services:
     ports:
       - "8090:8090"
     volumes:
-      - ./data/bautagebuch.db:/app/bautagebuch.db
-      - ./data/uploads:/app/uploads
-      - ./data/output:/app/output
+      - ./data:/app/data
     env_file:
       - .env
     environment:
-      - DATABASE_URL=sqlite:///bautagebuch.db
-      - PDF_OUTPUT_DIR=./output
-      - UPLOAD_DIR=./uploads
+      - DATABASE_URL=sqlite:///data/bautagebuch.db
+      - PDF_OUTPUT_DIR=./data/output
+      - UPLOAD_DIR=./data/uploads
