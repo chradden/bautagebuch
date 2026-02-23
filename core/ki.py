@@ -139,9 +139,10 @@ Regeln:
 - Schreibe in professionellem, sachlichem Stil
 - Gruppiere nach Priorität (rot → gelb → grün)
 - Behalte wichtige Details (Maße, Materialien, Ortsangaben)
-- Gib bei jedem Punkt die geschätzte Kosten an wenn möglich
+- Verwende EXAKT die Kostenschätzungen aus den Einträgen – erfinde keine eigenen Zahlen
 - Nutze Aufzählungspunkte
 - Erfinde KEINE Informationen – nur was in den Einträgen steht
+- Verwende KEIN Markdown mit ** oder ähnlichem – nutze einfachen Text mit Aufzählungszeichen (•)
 - Antworte auf Deutsch
 
 Einträge des Tages:
@@ -151,14 +152,18 @@ Einträge des Tages:
 def generiere_bericht_text(eintraege: list[dict]) -> str:
     """Generiert einen strukturierten Berichtstext aus Einträgen per GPT."""
     eintraege_text = ""
-    for e in eintraege:
-        zeit = e.get("uhrzeit", "")
+    for i, e in enumerate(eintraege, 1):
         typ = e.get("typ", "text")
         inhalt = e.get("rohinhalt", "")
         kategorie = e.get("kategorie", "")
+        prio = e.get("prioritaet", "")
+        kosten = e.get("kostenschaetzung", "")
         foto_beschreibungen = e.get("foto_beschreibungen", [])
 
-        eintraege_text += f"[{zeit}] ({typ}, {kategorie}) {inhalt}\n"
+        eintraege_text += f"[Nr. {i}] ({typ}, {kategorie}, Priorität: {prio})"
+        if kosten:
+            eintraege_text += f" [Kostenschätzung: {kosten}]"
+        eintraege_text += f" {inhalt}\n"
         for fb in foto_beschreibungen:
             eintraege_text += f"  → Foto: {fb}\n"
 

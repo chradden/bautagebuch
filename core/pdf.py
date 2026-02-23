@@ -1,5 +1,6 @@
 """PDF-Generierung für Tagesberichte."""
 import os
+import markdown
 from datetime import date, datetime
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
@@ -36,13 +37,21 @@ def generiere_pdf(
             "uhrzeit": getattr(foto, 'uhrzeit', None),
         })
 
+    # KI-Bericht: Markdown → HTML konvertieren
+    ki_bericht_html = ""
+    if ki_bericht:
+        ki_bericht_html = markdown.markdown(
+            ki_bericht,
+            extensions=["tables", "sane_lists"],
+        )
+
     html_content = template.render(
         projekt_name=projekt_name,
         datum=datum.strftime("%d.%m.%Y"),
         bauleiter=bauleiter_name,
         eintraege_text=eintraege_text,
         fotos=foto_daten,
-        ki_bericht=ki_bericht,
+        ki_bericht=ki_bericht_html,
         erstellt_am=datetime.now().strftime("%d.%m.%Y %H:%M"),
     )
 
