@@ -16,9 +16,27 @@
 
     <main class="container">
         <div class="page-header">
-            <h1>Objektübersicht</h1>
-            <p class="subtitle">{{ projekte | length }} Objekt{{ 'e' if projekte | length != 1 else '' }} registriert</p>
+            <div class="header-row">
+                <div>
+                    <h1>Objektübersicht</h1>
+                    <p class="subtitle">{{ projekte | length }} Objekt{{ 'e' if projekte | length != 1 else '' }} registriert</p>
+                </div>
+            </div>
         </div>
+
+        <!-- Erfolgs-/Fehler-Meldungen -->
+        {% if erfolg == 'verschoben' %}
+        <div class="alert alert-success">✅ Objekt wurde verschoben.</div>
+        {% elif erfolg == 'geloescht' %}
+        <div class="alert alert-success">✅ Objekt wurde gelöscht.</div>
+        {% elif erfolg == 'umbenannt' %}
+        <div class="alert alert-success">✅ Ordner wurde umbenannt.</div>
+        {% elif erfolg == 'ordner_geloescht' %}
+        <div class="alert alert-success">✅ Ordner wurde aufgelöst.</div>
+        {% endif %}
+        {% if fehler == 'leerer_name' %}
+        <div class="alert alert-warning">⚠️ Ordnername darf nicht leer sein.</div>
+        {% endif %}
 
         {% if not projekte %}
         <div class="empty-state">
@@ -28,11 +46,14 @@
         </div>
         {% endif %}
 
+        <!-- Objekte OHNE Ordner -->
+        {% set lose_projekte = projekte | selectattr('ordner', 'equalto', '') | list %}
+        {% if lose_projekte %}
         <div class="cards-grid">
-            {% for p in projekte %}
-            <a href="/projekt/{{ p.id }}" class="card projekt-card">
+            {% for p in lose_projekte %}
+            <div class="card projekt-card">
                 <div class="card-header">
-                    <h2>{{ p.name }}</h2>
+                    <a href="/projekt/{{ p.id }}" class="card-title-link"><h2>{{ p.name }}</h2></a>
                     <span class="badge">{{ p.anzahl_eintraege }} Meldungen</span>
                 </div>
                 <div class="card-meta">
@@ -67,10 +88,153 @@
                     {% endfor %}
                 </div>
                 {% endif %}
-            </a>
+                <div class="card-actions">
+                    <button class="btn btn-action" onclick="verschiebenZeigen({{ p.id }}, '{{ p.name }}')">📁 Verschieben</button>
+                    <button class="btn btn-action btn-action-danger" onclick="loeschenZeigen({{ p.id }}, '{{ p.name }}')">🗑️ Löschen</button>
+                </div>
+            </div>
             {% endfor %}
         </div>
+        {% endif %}
+
+        <!-- Ordner mit Objekten -->
+        {% for ordner_name in ordner_liste %}
+        {% set ordner_projekte = projekte | selectattr('ordner', 'equalto', ordner_name) | list %}
+        {% if ordner_projekte %}
+        <div class="ordner-container">
+            <div class="ordner-header" onclick="toggleOrdner(this)">
+                <div class="ordner-title">
+                    <span class="ordner-icon">📂</span>
+                    <h2>{{ ordner_name }}</h2>
+                    <span class="badge">{{ ordner_projekte | length }}</span>
+                </div>
+                <div class="ordner-actions" onclick="event.stopPropagation()">
+                    <button class="btn btn-small-icon" title="Umbenennen"
+                            onclick="ordnerUmbenennen('{{ ordner_name }}')">✏️</button>
+                    <button class="btn btn-small-icon btn-danger-icon" title="Ordner auflösen"
+                            onclick="ordnerAufloesen('{{ ordner_name }}')">🗑️</button>
+                </div>
+            </div>
+            <div class="ordner-inhalt">
+                <div class="cards-grid">
+                    {% for p in ordner_projekte %}
+                    <div class="card projekt-card">
+                        <div class="card-header">
+                            <a href="/projekt/{{ p.id }}" class="card-title-link"><h2>{{ p.name }}</h2></a>
+                            <span class="badge">{{ p.anzahl_eintraege }} Meldungen</span>
+                        </div>
+                        <div class="card-meta">
+                            <span>📍 {{ p.adresse }}</span>
+                            {% if p.baubeginn != '–' %}
+                            <span>📅 seit {{ p.baubeginn }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="card-stats">
+                            <div class="stat">
+                                <span class="stat-value">{{ p.anzahl_eintraege }}</span>
+                                <span class="stat-label">Meldungen</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value">{{ p.anzahl_fotos }}</span>
+                                <span class="stat-label">Fotos</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value">{{ p.anzahl_berichte }}</span>
+                                <span class="stat-label">Berichte</span>
+                            </div>
+                        </div>
+                        {% if p.letzte_eintraege %}
+                        <div class="card-recent">
+                            <h4>Letzte Meldungen</h4>
+                            {% for e in p.letzte_eintraege %}
+                            <div class="recent-entry">
+                                <span class="re-date">{{ e.datum }} {{ e.uhrzeit }}</span>
+                                <span class="re-kat">{{ e.kategorie }}</span>
+                                <span class="re-text">{{ e.rohinhalt }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="card-actions">
+                            <button class="btn btn-action" onclick="verschiebenZeigen({{ p.id }}, '{{ p.name }}')">📁 Verschieben</button>
+                            <button class="btn btn-action btn-action-danger" onclick="loeschenZeigen({{ p.id }}, '{{ p.name }}')">🗑️ Löschen</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
     </main>
+
+    <!-- Modal: Projekt verschieben -->
+    <div id="modal-verschieben" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📁 Objekt verschieben</h3>
+                <button class="modal-close" onclick="modalSchliessen('modal-verschieben')">&times;</button>
+            </div>
+            <form id="form-verschieben" method="post" action="">
+                <div class="modal-body">
+                    <p id="verschieben-text">Verschiebe <strong></strong> in:</p>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="ordner_wahl" value="__hauptebene__" checked
+                                   onchange="document.getElementById('neuer-ordner-input').style.display='none'">
+                            📄 Hauptebene (kein Ordner)
+                        </label>
+                        {% for o in ordner_liste %}
+                        <label class="radio-option">
+                            <input type="radio" name="ordner_wahl" value="{{ o }}"
+                                   onchange="document.getElementById('neuer-ordner-input').style.display='none'">
+                            📂 {{ o }}
+                        </label>
+                        {% endfor %}
+                        <label class="radio-option">
+                            <input type="radio" name="ordner_wahl" value="__neu__"
+                                   onchange="document.getElementById('neuer-ordner-input').style.display='block'">
+                            ➕ Neuer Ordner...
+                        </label>
+                        <input type="text" id="neuer-ordner-input" name="neuer_ordner_name"
+                               placeholder="Ordnername eingeben"
+                               class="input-field"
+                               style="display: none; margin-top: 8px;">
+                    </div>
+                    <input type="hidden" name="ordner" id="ordner-value" value="">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="modalSchliessen('modal-verschieben')">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Verschieben</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Projekt löschen -->
+    <div id="modal-loeschen" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚠️ Objekt löschen</h3>
+                <button class="modal-close" onclick="modalSchliessen('modal-loeschen')">&times;</button>
+            </div>
+            <form id="form-loeschen" method="post" action="">
+                <div class="modal-body">
+                    <p class="alert alert-warning" style="margin-bottom: 12px;">
+                        ⚠️ <strong>Achtung:</strong> Alle Meldungen, Fotos und Berichte dieses Objekts werden unwiderruflich gelöscht!
+                    </p>
+                    <p>Gib zur Bestätigung den Objektnamen ein:</p>
+                    <p style="margin: 8px 0; font-weight: bold; font-size: 1.1em;" id="loeschen-name-anzeige"></p>
+                    <input type="text" name="bestaetigung" placeholder="Objektname eingeben"
+                           class="input-field" autocomplete="off" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="modalSchliessen('modal-loeschen')">Abbrechen</button>
+                    <button type="submit" class="btn btn-danger">🗑️ Endgültig löschen</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <footer class="footer">
         <div class="container">
@@ -78,5 +242,99 @@
             <span>Powered by KI 🤖</span>
         </div>
     </footer>
+
+    <script>
+        // ─── Ordner auf-/zuklappen ─────────────────────────────
+        function toggleOrdner(headerEl) {
+            const inhalt = headerEl.nextElementSibling;
+            const icon = headerEl.querySelector('.ordner-icon');
+            if (inhalt.style.display === 'none') {
+                inhalt.style.display = 'block';
+                icon.textContent = '📂';
+            } else {
+                inhalt.style.display = 'none';
+                icon.textContent = '📁';
+            }
+        }
+
+        // ─── Verschieben-Modal ────────────────────────────────────
+        function verschiebenZeigen(projektId, projektName) {
+            document.getElementById('form-verschieben').action = '/projekt/' + projektId + '/verschieben';
+            document.getElementById('verschieben-text').innerHTML = 'Verschiebe <strong>' + projektName + '</strong> in:';
+            document.getElementById('neuer-ordner-input').style.display = 'none';
+            // Reset radio
+            const radios = document.querySelectorAll('input[name="ordner_wahl"]');
+            if (radios.length > 0) radios[0].checked = true;
+            document.getElementById('modal-verschieben').style.display = 'flex';
+        }
+
+        // Form Submit abfangen für Ordner-Logik
+        document.getElementById('form-verschieben').addEventListener('submit', function(e) {
+            const wahl = document.querySelector('input[name="ordner_wahl"]:checked').value;
+            let ordner = '';
+            if (wahl === '__hauptebene__') {
+                ordner = '';
+            } else if (wahl === '__neu__') {
+                ordner = document.getElementById('neuer-ordner-input').value.trim();
+                if (!ordner) { e.preventDefault(); alert('Bitte einen Ordnernamen eingeben.'); return; }
+            } else {
+                ordner = wahl;
+            }
+            document.getElementById('ordner-value').value = ordner;
+        });
+
+        // ─── Löschen-Modal ────────────────────────────────────────
+        function loeschenZeigen(projektId, projektName) {
+            document.getElementById('form-loeschen').action = '/projekt/' + projektId + '/loeschen';
+            document.getElementById('loeschen-name-anzeige').textContent = projektName;
+            document.getElementById('modal-loeschen').style.display = 'flex';
+        }
+
+        // ─── Ordner umbenennen/auflösen ────────────────────────────
+        function ordnerUmbenennen(alterName) {
+            const neuerName = prompt('Neuen Namen für Ordner "' + alterName + '" eingeben:', alterName);
+            if (neuerName && neuerName.trim() && neuerName.trim() !== alterName) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/ordner/umbenennen';
+                form.innerHTML = '<input type="hidden" name="alter_name" value="' + alterName + '">' +
+                                 '<input type="hidden" name="neuer_name" value="' + neuerName.trim() + '">';
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        function ordnerAufloesen(name) {
+            if (confirm('Ordner "' + name + '" auflösen?\n\nDie Objekte bleiben erhalten und werden in die Hauptebene verschoben.')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/ordner/loeschen';
+                form.innerHTML = '<input type="hidden" name="ordner_name" value="' + name + '">';
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        // ─── Modal allgemein ──────────────────────────────────────
+        function modalSchliessen(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // Modal schließen bei Klick auf Hintergrund
+        document.querySelectorAll('.modal').forEach(function(modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) modalSchliessen(this.id);
+            });
+        });
+
+        // Erfolgs-/Fehler-Alerts nach 4s ausblenden
+        setTimeout(function() {
+            document.querySelectorAll('main > .alert').forEach(function(el) {
+                el.style.transition = 'opacity 0.5s';
+                el.style.opacity = '0';
+                setTimeout(function() { el.remove(); }, 500);
+            });
+        }, 4000);
+    </script>
 </body>
 </html>

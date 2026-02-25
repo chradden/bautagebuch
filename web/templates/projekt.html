@@ -29,6 +29,7 @@
                 <div class="header-actions">
                     <a href="/export/{{ projekt.id }}/csv{% if filter_datum %}?datum={{ filter_datum }}{% endif %}" 
                        class="btn btn-secondary">📥 CSV-Export</a>
+                    <button class="btn btn-danger" onclick="loeschenZeigen()">🗑️ Löschen</button>
                 </div>
             </div>
         </div>
@@ -152,6 +153,11 @@
                     ⚠️ Keine Einträge für dieses Datum vorhanden.
                 </div>
                 {% endif %}
+                {% if fehler == 'loeschen_name_falsch' %}
+                <div class="alert alert-warning">
+                    ⚠️ Objektname stimmt nicht überein. Löschung abgebrochen.
+                </div>
+                {% endif %}
                 {% if erfolg == 'bericht_erstellt' %}
                 <div class="alert alert-success">
                     ✅ Bericht wurde erfolgreich erstellt!
@@ -193,6 +199,31 @@
         </div>
     </footer>
 
+    <!-- Modal: Projekt löschen -->
+    <div id="modal-loeschen" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚠️ Objekt löschen</h3>
+                <button class="modal-close" onclick="document.getElementById('modal-loeschen').style.display='none'">&times;</button>
+            </div>
+            <form method="post" action="/projekt/{{ projekt.id }}/loeschen">
+                <div class="modal-body">
+                    <p class="alert alert-warning" style="margin-bottom: 12px;">
+                        ⚠️ <strong>Achtung:</strong> Alle Meldungen, Fotos und Berichte werden unwiderruflich gelöscht!
+                    </p>
+                    <p>Gib zur Bestätigung den Objektnamen ein:</p>
+                    <p style="margin: 8px 0; font-weight: bold; font-size: 1.1em;">{{ projekt.name }}</p>
+                    <input type="text" name="bestaetigung" placeholder="Objektname eingeben"
+                           class="input-field" autocomplete="off" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-loeschen').style.display='none'">Abbrechen</button>
+                    <button type="submit" class="btn btn-danger">🗑️ Endgültig löschen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         function showTab(name) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -210,9 +241,21 @@
         });
 
         // Bei erfolg/fehler: Berichte-Tab öffnen
-        {% if erfolg or fehler %}
+        {% if erfolg or fehler == 'keine_eintraege' %}
         showTab('berichte');
         {% endif %}
+
+        // Löschen-Modal
+        function loeschenZeigen() {
+            document.getElementById('modal-loeschen').style.display = 'flex';
+        }
+
+        // Modal schließen bei Klick auf Hintergrund
+        document.querySelectorAll('.modal').forEach(function(modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) this.style.display = 'none';
+            });
+        });
     </script>
 </body>
 </html>

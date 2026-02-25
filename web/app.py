@@ -81,11 +81,17 @@ def _parse_ki_zusammenfassung(text: str) -> dict:
 # ─── Routen ───────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request, auth=Depends(auth_pruefen)):
-    """Hauptseite – Projektübersicht mit Statistiken."""
+async def dashboard(
+    request: Request,
+    erfolg: str = Query(None),
+    fehler: str = Query(None),
+    auth=Depends(auth_pruefen),
+):
+    """Hauptseite – Projektübersicht mit Ordnern."""
     with get_session() as session:
-        projekte = session.query(Projekt).all()
+        projekte = session.query(Projekt).order_by(Projekt.ordner, Projekt.name).all()
         projekt_daten = []
+        ordner_set = set()
         for p in projekte:
             anzahl = session.query(Eintrag).filter_by(projekt_id=p.id).count()
             anzahl_fotos = (
@@ -96,13 +102,6 @@ async def dashboard(request: Request, auth=Depends(auth_pruefen)):
             )
             anzahl_berichte = session.query(Tagesbericht).filter_by(projekt_id=p.id).count()
 
-            # Prioritäts-Verteilung
-            prio_rot = session.query(Eintrag).filter(
-                Eintrag.projekt_id == p.id,
-                Eintrag.ki_zusammenfassung.like('%"prioritaet": "rot"%')
-            ).count()
-
-            # Einfacher: Kategorie-basiert zählen
             letzte_eintraege = (
                 session.query(Eintrag)
                 .filter_by(projekt_id=p.id)
@@ -110,6 +109,10 @@ async def dashboard(request: Request, auth=Depends(auth_pruefen)):
                 .limit(3)
                 .all()
             )
+
+            ordner_name = p.ordner or ""
+            if ordner_name:
+                ordner_set.add(ordner_name)
 
             projekt_daten.append({
                 "id": p.id,
@@ -119,6 +122,7 @@ async def dashboard(request: Request, auth=Depends(auth_pruefen)):
                 "anzahl_eintraege": anzahl,
                 "anzahl_fotos": anzahl_fotos,
                 "anzahl_berichte": anzahl_berichte,
+                "ordner": ordner_name,
                 "letzte_eintraege": [
                     {
                         "datum": e.datum.strftime("%d.%m.") if e.datum else "",
@@ -130,10 +134,16 @@ async def dashboard(request: Request, auth=Depends(auth_pruefen)):
                 ],
             })
 
+        # Ordner-Liste (sortiert) für Verschieben-Dropdown
+        ordner_liste = sorted(ordner_set)
+
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "projekte": projekt_daten,
+        "ordner_liste": ordner_liste,
         "titel": "Instandhaltungsplanung",
+        "erfolg": erfolg or "",
+        "fehler": fehler or "",
     })
 
 
@@ -498,3 +508,104 @@ async def api_stats(projekt_id: int, auth=Depends(auth_pruefen)):
         "berichte": berichte,
         "kategorien": {k or "sonstiges": c for k, c in kat_counts},
     }
+
+
+# ─── Ordner-Verwaltung ───────────────────────────────────────────────────
+
+@app.post("/projekt/{projekt_id}/verschieben")
+async def projekt_verschieben(
+    projekt_id: int,
+    ordner: str = Form(""),
+    auth=Depends(auth_pruefen),
+):
+    """Verschiebt ein Projekt in einen Ordner."""
+    with get_session() as session:
+        projekt = session.query(Projekt).get(projekt_id)
+        if not projekt:
+            return HTMLResponse("<h1>Projekt nicht gefunden</h1>", status_code=404)
+        projekt.ordner = ordner.strip()
+    return RedirectResponse(url="/?erfolg=verschoben", status_code=303)
+
+
+@app.post("/ordner/umbenennen")
+async def ordner_umbenennen(
+    alter_name: str = Form(...),
+    neuer_name: str = Form(...),
+    auth=Depends(auth_pruefen),
+):
+    """Benennt einen Ordner um (ändert alle zugehörigen Projekte)."""
+    neuer = neuer_name.strip()
+    if not neuer:
+        return RedirectResponse(url="/?fehler=leerer_name", status_code=303)
+    with get_session() as session:
+        projekte = session.query(Projekt).filter(Projekt.ordner == alter_name.strip()).all()
+        for p in projekte:
+            p.ordner = neuer
+    return RedirectResponse(url="/?erfolg=umbenannt", status_code=303)
+
+
+@app.post("/ordner/loeschen")
+async def ordner_loeschen(
+    ordner_name: str = Form(...),
+    auth=Depends(auth_pruefen),
+):
+    """Löst einen Ordner auf – Projekte werden in die Hauptebene verschoben."""
+    with get_session() as session:
+        projekte = session.query(Projekt).filter(Projekt.ordner == ordner_name.strip()).all()
+        for p in projekte:
+            p.ordner = ""
+    return RedirectResponse(url="/?erfolg=ordner_geloescht", status_code=303)
+
+
+# ─── Projekt löschen ─────────────────────────────────────────────────────
+
+@app.post("/projekt/{projekt_id}/loeschen")
+async def projekt_loeschen(
+    projekt_id: int,
+    bestaetigung: str = Form(""),
+    auth=Depends(auth_pruefen),
+):
+    """Löscht ein Projekt mit allen zugehörigen Daten."""
+    with get_session() as session:
+        projekt = session.query(Projekt).get(projekt_id)
+        if not projekt:
+            return HTMLResponse("<h1>Projekt nicht gefunden</h1>", status_code=404)
+
+        if bestaetigung != projekt.name:
+            return RedirectResponse(
+                url=f"/projekt/{projekt_id}?fehler=loeschen_name_falsch",
+                status_code=303,
+            )
+
+        # Fotos löschen (Dateien + DB)
+        fotos = session.query(Foto).join(Eintrag).filter(Eintrag.projekt_id == projekt_id).all()
+        for foto in fotos:
+            if foto.dateipfad and os.path.exists(foto.dateipfad):
+                try:
+                    os.remove(foto.dateipfad)
+                except OSError:
+                    pass
+            session.delete(foto)
+
+        # Berichte löschen (PDF-Dateien + DB)
+        berichte = session.query(Tagesbericht).filter_by(projekt_id=projekt_id).all()
+        for b in berichte:
+            if b.pdf_pfad and os.path.exists(b.pdf_pfad):
+                try:
+                    os.remove(b.pdf_pfad)
+                except OSError:
+                    pass
+            session.delete(b)
+
+        # Einträge löschen
+        session.query(Eintrag).filter_by(projekt_id=projekt_id).delete()
+
+        # Benutzer-Referenzen aufheben
+        session.query(Benutzer).filter_by(aktives_projekt_id=projekt_id).update(
+            {"aktives_projekt_id": None}
+        )
+
+        # Projekt löschen
+        session.delete(projekt)
+
+    return RedirectResponse(url="/?erfolg=geloescht", status_code=303)

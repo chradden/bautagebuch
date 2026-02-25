@@ -20,6 +20,7 @@ class Projekt(Base):
     longitude = Column(Float)
     bauherr = Column(String)
     baubeginn = Column(Date)
+    ordner = Column(String, default="")  # Ordnername zur Sortierung
     erstellt_am = Column(DateTime, default=datetime.now)
 
     eintraege = relationship("Eintrag", back_populates="projekt")
