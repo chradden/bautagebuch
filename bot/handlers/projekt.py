@@ -175,6 +175,74 @@ def get_projekt_callback_handler():
     return CallbackQueryHandler(projekt_auswahl_callback, pattern=r"^projekt_\d+$")
 
 
+async def debug_standort_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Debug: Testet Geocoding mit festen Koordinaten: /debugstandort [lat lon]"""
+    telegram_id = update.effective_user.id
+    logger.info("DEBUG-STANDORT aufgerufen von User %s", telegram_id)
+
+    # Standard: Berlin Mitte
+    lat, lon = 52.5200, 13.4050
+    if context.args and len(context.args) >= 2:
+        try:
+            lat = float(context.args[0])
+            lon = float(context.args[1])
+        except ValueError:
+            await update.message.reply_text("Ungültige Koordinaten. Nutze: /debugstandort 52.52 13.40")
+            return
+
+    await update.message.reply_text(
+        f"🔧 Debug-Test Geocoding...\n"
+        f"Koordinaten: {lat}, {lon}"
+    )
+
+    try:
+        geo_result = await reverse_geocode(lat, lon)
+        logger.info("DEBUG Geocoding-Ergebnis: %s", geo_result)
+    except Exception as e:
+        logger.error("DEBUG Geocoding-Exception: %s", e)
+        await update.message.reply_text(f"❌ Geocoding-Fehler: {e}")
+        return
+
+    if not geo_result:
+        await update.message.reply_text("❌ Geocoding hat None zurückgegeben.")
+        return
+
+    # Versuche in DB zu speichern
+    try:
+        with get_session() as session:
+            benutzer = session.query(Benutzer).filter_by(telegram_id=telegram_id).first()
+            if not benutzer or not benutzer.aktives_projekt_id:
+                await update.message.reply_text(
+                    f"✅ Geocoding funktioniert!\n\n"
+                    f"📍 {geo_result['adresse']}\n\n"
+                    f"⚠️ Kein aktives Projekt → Adresse nicht gespeichert."
+                )
+                return
+
+            projekt = session.query(Projekt).get(benutzer.aktives_projekt_id)
+            if projekt:
+                projekt.adresse = geo_result["adresse"]
+                projekt.latitude = lat
+                projekt.longitude = lon
+                projekt_name = projekt.name
+                logger.info("DEBUG: Adresse '%s' gespeichert für Projekt '%s'", geo_result["adresse"], projekt_name)
+    except Exception as e:
+        logger.error("DEBUG DB-Fehler: %s", e)
+        await update.message.reply_text(
+            f"✅ Geocoding OK: {geo_result['adresse']}\n\n"
+            f"❌ DB-Fehler: {e}"
+        )
+        return
+
+    await update.message.reply_text(
+        f"✅ Debug komplett erfolgreich!\n\n"
+        f"📍 Adresse: {geo_result['adresse']}\n"
+        f"🗺️ Koordinaten: {lat}, {lon}\n"
+        f"💾 Gespeichert in Projekt: {projekt_name}\n\n"
+        f"Prüfe jetzt das Dashboard!"
+    )
+
+
 async def standort_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Fordert den Benutzer auf, seinen Standort zu teilen: /standort"""
     telegram_id = update.effective_user.id
