@@ -15,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 def start_web_dashboard():
     """Startet das FastAPI Web-Dashboard in einem separaten Thread."""
-    logger.info("Starte Web-Dashboard auf http://0.0.0.0:8090")
+    logger.info("Starte Web-Dashboard auf http://0.0.0.0:8093")
     uvicorn.run(
         "web.app:app",
         host="0.0.0.0",
-        port=8090,
+        port=8093,
         log_level="info",
         reload=False,
     )
@@ -34,7 +34,7 @@ def main():
         # Web-Dashboard in separatem Thread starten, Bot im Hauptthread
         web_thread = threading.Thread(target=start_web_dashboard, daemon=True)
         web_thread.start()
-        logger.info("Web-Dashboard gestartet (Port 8090)")
+        logger.info("Web-Dashboard gestartet (Port 8093)")
 
         logger.info("Starte Telegram-Bot...")
         from bot.main import main as bot_main

@@ -164,7 +164,7 @@ async def hilfe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "💰 Kostenschätzung wird automatisch erstellt.\n\n"
         "📍 **Standort teilen:** Sende /standort um die Adresse\n"
         "des Projekts automatisch per GPS zu setzen.\n\n"
-        "🌐 **Web-Dashboard:** http://localhost:8090",
+        "🌐 **Web-Dashboard:** http://localhost:8093",
         parse_mode="Markdown"
     )
 

@@ -4,7 +4,7 @@ services:
     container_name: instandhaltung
     restart: unless-stopped
     ports:
-      - "8090:8090"
+      - "8093:8093"
     volumes:
       - ./data:/app/data
     env_file:
