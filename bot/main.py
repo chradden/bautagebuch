@@ -12,7 +12,7 @@ from telegram.ext import (
 
 import config
 from db.database import init_db
-from bot.handlers.start import get_start_handler
+from bot.handlers.start import get_start_handler, name_aendern
 from bot.handlers.projekt import (
     projekt_command,
     wechsel_command,
@@ -89,6 +89,7 @@ def main():
     app.add_handler(CommandHandler("bericht", bericht_command))
     app.add_handler(CommandHandler("export", export_command))
     app.add_handler(CommandHandler("hilfe", hilfe_command))
+    app.add_handler(CommandHandler("name", name_aendern))
     app.add_handler(CommandHandler("standort", standort_command))
 
     # 3. Callback für Inline-Buttons

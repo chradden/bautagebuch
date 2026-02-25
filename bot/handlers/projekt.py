@@ -146,6 +146,7 @@ async def hilfe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🔧 **Instandhaltungsplanung – Befehle**\n\n"
         "/start – Registrierung\n"
+        "/name <Name> – Namen ändern\n"
         "/projekt <Name> – Neues Objekt/Projekt anlegen\n"
         "/wechsel – Aktives Projekt wechseln\n"
         "/standort – Adresse per Standort setzen\n"

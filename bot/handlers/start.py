@@ -107,6 +107,41 @@ async def name_eingabe(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
+async def name_aendern(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Ändert den Namen des Benutzers. Syntax: /name <Neuer Name>"""
+    telegram_id = update.effective_user.id
+    args = update.message.text.split(maxsplit=1)
+
+    if len(args) < 2 or not args[1].strip():
+        with get_session() as session:
+            benutzer = session.query(Benutzer).filter_by(telegram_id=telegram_id).first()
+            aktueller_name = benutzer.name if benutzer else "unbekannt"
+        await update.message.reply_text(
+            f"Dein aktueller Name: **{aktueller_name}**\n\n"
+            f"Zum Ändern: `/name Neuer Name`\n"
+            f"Beispiel: `/name Christian Radden`",
+            parse_mode="Markdown"
+        )
+        return
+
+    neuer_name = args[1].strip()
+
+    with get_session() as session:
+        benutzer = session.query(Benutzer).filter_by(telegram_id=telegram_id).first()
+        if not benutzer:
+            await update.message.reply_text(
+                "❌ Du bist noch nicht registriert. Nutze /start"
+            )
+            return
+        alter_name = benutzer.name
+        benutzer.name = neuer_name
+
+    await update.message.reply_text(
+        f"✅ Name geändert: **{alter_name}** → **{neuer_name}**",
+        parse_mode="Markdown"
+    )
+
+
 async def abbrechen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Bricht die Registrierung ab."""
     await update.message.reply_text("Registrierung abgebrochen.")
