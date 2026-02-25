@@ -208,6 +208,7 @@ async def standort_empfangen(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not location:
         return
 
+    # Prüfen ob Benutzer und aktives Projekt existieren
     with get_session() as session:
         benutzer = session.query(Benutzer).filter_by(telegram_id=telegram_id).first()
         if not benutzer:
@@ -225,25 +226,28 @@ async def standort_empfangen(update: Update, context: ContextTypes.DEFAULT_TYPE)
             )
             return
 
-        projekt = session.query(Projekt).get(benutzer.aktives_projekt_id)
-        if not projekt:
-            await update.message.reply_text(
-                "Projekt nicht gefunden.",
-                reply_markup=ReplyKeyboardRemove(),
-            )
-            return
+        aktives_projekt_id = benutzer.aktives_projekt_id
 
-        # Koordinaten speichern
-        projekt.latitude = location.latitude
-        projekt.longitude = location.longitude
-
-    # Reverse Geocoding (außerhalb DB-Session)
+    # Reverse Geocoding
     await update.message.reply_text(
         "🔍 Ermittle Adresse aus Koordinaten...",
         reply_markup=ReplyKeyboardRemove(),
     )
 
     geo_result = await reverse_geocode(location.latitude, location.longitude)
+
+    # Alles in einer einzigen Session speichern (Koordinaten + Adresse)
+    with get_session() as session:
+        projekt = session.query(Projekt).get(aktives_projekt_id)
+        if not projekt:
+            await update.message.reply_text("Projekt nicht gefunden.")
+            return
+
+        projekt.latitude = location.latitude
+        projekt.longitude = location.longitude
+
+        if geo_result:
+            projekt.adresse = geo_result["adresse"]
 
     if not geo_result:
         await update.message.reply_text(
@@ -252,17 +256,6 @@ async def standort_empfangen(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"📍 {location.latitude:.6f}, {location.longitude:.6f}"
         )
         return
-
-    # Adresse in DB speichern
-    with get_session() as session:
-        projekt = session.query(Projekt).get(
-            session.query(Benutzer)
-            .filter_by(telegram_id=telegram_id)
-            .first()
-            .aktives_projekt_id
-        )
-        if projekt:
-            projekt.adresse = geo_result["adresse"]
 
     await update.message.reply_text(
         f"✅ Adresse für das Projekt gesetzt!\n\n"
