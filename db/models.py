@@ -16,6 +16,8 @@ class Projekt(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)
     adresse = Column(String)
+    latitude = Column(Float)
+    longitude = Column(Float)
     bauherr = Column(String)
     baubeginn = Column(Date)
     erstellt_am = Column(DateTime, default=datetime.now)

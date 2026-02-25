@@ -1,5 +1,5 @@
 """Keyboard-Layouts für Inline-Buttons."""
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 
 
 def projekt_auswahl_keyboard(projekte):
@@ -9,3 +9,13 @@ def projekt_auswahl_keyboard(projekte):
         for p in projekte
     ]
     return InlineKeyboardMarkup(buttons)
+
+
+def standort_keyboard():
+    """Erstellt ein Reply-Keyboard mit Standort-Teilen-Button."""
+    button = KeyboardButton("📍 Standort teilen", request_location=True)
+    return ReplyKeyboardMarkup(
+        [[button]],
+        one_time_keyboard=True,
+        resize_keyboard=True,
+    )

@@ -15,6 +15,8 @@ from bot.handlers.projekt import (
     wechsel_command,
     status_command,
     hilfe_command,
+    standort_command,
+    standort_empfangen,
     get_projekt_callback_handler,
 )
 from bot.handlers.eintrag import text_eintrag, foto_eintrag, sprach_eintrag
@@ -49,6 +51,7 @@ def main():
     app.add_handler(CommandHandler("bericht", bericht_command))
     app.add_handler(CommandHandler("export", export_command))
     app.add_handler(CommandHandler("hilfe", hilfe_command))
+    app.add_handler(CommandHandler("standort", standort_command))
 
     # 3. Callback für Inline-Buttons
     app.add_handler(get_projekt_callback_handler())
@@ -57,6 +60,7 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_eintrag))
     app.add_handler(MessageHandler(filters.PHOTO, foto_eintrag))
     app.add_handler(MessageHandler(filters.VOICE, sprach_eintrag))
+    app.add_handler(MessageHandler(filters.LOCATION, standort_empfangen))
 
     # 5. Tägliche Erinnerung registrieren (18:00 Uhr)
     erinnerung_registrieren(app.job_queue)

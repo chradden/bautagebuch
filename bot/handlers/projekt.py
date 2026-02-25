@@ -1,10 +1,11 @@
 """Handler für /projekt, /wechsel, /status – Projektverwaltung."""
-from telegram import Update
+from telegram import Update, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, CallbackQueryHandler
 
 from db.database import get_session
 from db.models import Benutzer, Projekt, Eintrag
-from bot.keyboards import projekt_auswahl_keyboard
+from bot.keyboards import projekt_auswahl_keyboard, standort_keyboard
+from core.geocoding import reverse_geocode
 from datetime import date
 
 
@@ -145,6 +146,7 @@ async def hilfe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/start – Registrierung\n"
         "/projekt <Name> – Neues Objekt/Projekt anlegen\n"
         "/wechsel – Aktives Projekt wechseln\n"
+        "/standort – Adresse per Standort setzen\n"
         "/status – Status & heutige Einträge\n"
         "/bericht – PDF-Instandhaltungsbericht generieren\n"
         "/bericht <TT.MM.JJJJ> – Bericht für bestimmtes Datum\n"
@@ -158,6 +160,8 @@ async def hilfe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🟡 GELB = Zeitnah beheben\n"
         "🟢 GRÜN = Kann geplant werden\n\n"
         "💰 Kostenschätzung wird automatisch erstellt.\n\n"
+        "📍 **Standort teilen:** Sende /standort um die Adresse\n"
+        "des Projekts automatisch per GPS zu setzen.\n\n"
         "🌐 **Web-Dashboard:** http://localhost:8090",
         parse_mode="Markdown"
     )
@@ -166,3 +170,103 @@ async def hilfe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def get_projekt_callback_handler():
     """Erstellt den CallbackQueryHandler für Projektauswahl."""
     return CallbackQueryHandler(projekt_auswahl_callback, pattern=r"^projekt_\d+$")
+
+
+async def standort_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Fordert den Benutzer auf, seinen Standort zu teilen: /standort"""
+    telegram_id = update.effective_user.id
+
+    with get_session() as session:
+        benutzer = session.query(Benutzer).filter_by(telegram_id=telegram_id).first()
+        if not benutzer:
+            await update.message.reply_text("Bitte zuerst /start ausführen.")
+            return
+
+        if not benutzer.aktives_projekt_id:
+            await update.message.reply_text(
+                "Kein aktives Projekt vorhanden.\n"
+                "Erstelle eins mit /projekt <Name>"
+            )
+            return
+
+        projekt = session.query(Projekt).get(benutzer.aktives_projekt_id)
+        projekt_name = projekt.name if projekt else "Unbekannt"
+
+    await update.message.reply_text(
+        f"📍 Teile deinen Standort, um die Adresse für "
+        f"\"{projekt_name}\" automatisch zu setzen.\n\n"
+        f"Klicke auf den Button unten oder sende einen Standort manuell.",
+        reply_markup=standort_keyboard(),
+    )
+
+
+async def standort_empfangen(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Verarbeitet einen geteilten Standort und setzt die Adresse im aktiven Projekt."""
+    telegram_id = update.effective_user.id
+    location = update.message.location
+
+    if not location:
+        return
+
+    with get_session() as session:
+        benutzer = session.query(Benutzer).filter_by(telegram_id=telegram_id).first()
+        if not benutzer:
+            await update.message.reply_text(
+                "Bitte zuerst /start ausführen.",
+                reply_markup=ReplyKeyboardRemove(),
+            )
+            return
+
+        if not benutzer.aktives_projekt_id:
+            await update.message.reply_text(
+                "Kein aktives Projekt vorhanden.\n"
+                "Erstelle eins mit /projekt <Name>",
+                reply_markup=ReplyKeyboardRemove(),
+            )
+            return
+
+        projekt = session.query(Projekt).get(benutzer.aktives_projekt_id)
+        if not projekt:
+            await update.message.reply_text(
+                "Projekt nicht gefunden.",
+                reply_markup=ReplyKeyboardRemove(),
+            )
+            return
+
+        # Koordinaten speichern
+        projekt.latitude = location.latitude
+        projekt.longitude = location.longitude
+
+    # Reverse Geocoding (außerhalb DB-Session)
+    await update.message.reply_text(
+        "🔍 Ermittle Adresse aus Koordinaten...",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+    geo_result = await reverse_geocode(location.latitude, location.longitude)
+
+    if not geo_result:
+        await update.message.reply_text(
+            f"⚠️ Adresse konnte nicht ermittelt werden.\n\n"
+            f"Koordinaten wurden gespeichert:\n"
+            f"📍 {location.latitude:.6f}, {location.longitude:.6f}"
+        )
+        return
+
+    # Adresse in DB speichern
+    with get_session() as session:
+        projekt = session.query(Projekt).get(
+            session.query(Benutzer)
+            .filter_by(telegram_id=telegram_id)
+            .first()
+            .aktives_projekt_id
+        )
+        if projekt:
+            projekt.adresse = geo_result["adresse"]
+
+    await update.message.reply_text(
+        f"✅ Adresse für das Projekt gesetzt!\n\n"
+        f"📍 **Adresse:** {geo_result['adresse']}\n"
+        f"🗺️ **Koordinaten:** {location.latitude:.6f}, {location.longitude:.6f}",
+        parse_mode="Markdown",
+    )
