@@ -92,18 +92,45 @@
         }
         .ki-bericht h1, .ki-bericht h2, .ki-bericht h3 {
             color: #2c3e50;
-            margin: 10px 0 4px 0;
+            margin: 14px 0 6px 0;
             font-size: 11pt;
         }
+        /* Priorisierungs-Farben in Überschriften */
+        .ki-bericht h1:first-child, .ki-bericht h2:first-child, .ki-bericht h3:first-child {
+            margin-top: 0;
+        }
         .ki-bericht ul, .ki-bericht ol {
-            margin: 2px 0 2px 20px;
-            padding: 0;
+            margin: 4px 0 8px 0;
+            padding-left: 22px;
+            list-style-position: outside;
+        }
+        .ki-bericht ul {
+            list-style-type: disc;
         }
         .ki-bericht li {
-            margin-bottom: 2px;
+            margin-bottom: 4px;
+            padding-left: 4px;
         }
         .ki-bericht p {
             margin: 4px 0;
+        }
+        .ki-bericht strong {
+            color: #2c3e50;
+        }
+        .prio-section-rot {
+            border-left: 4px solid #e74c3c;
+            padding-left: 10px;
+            margin-bottom: 12px;
+        }
+        .prio-section-gelb {
+            border-left: 4px solid #f1c40f;
+            padding-left: 10px;
+            margin-bottom: 12px;
+        }
+        .prio-section-gruen {
+            border-left: 4px solid #27ae60;
+            padding-left: 10px;
+            margin-bottom: 12px;
         }
         .kategorie-badge {
             display: inline-block;

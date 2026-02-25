@@ -126,23 +126,21 @@ def beschreibe_foto(dateipfad: str) -> str:
 
 BERICHT_PROMPT = """Du bist ein professioneller Assistent für Instandhaltungsplanung. Erstelle aus den folgenden Einträgen einen strukturierten Instandhaltungsbericht.
 
-Strukturiere den Bericht in diese Abschnitte (nur wenn Daten vorhanden):
+Strukturiere den Bericht in diese Abschnitte (nur wenn passende Daten vorhanden):
 1. **🔴 Sofortmaßnahmen (Priorität ROT)** – Sicherheitsrelevant, sofort handeln
 2. **🟡 Zeitnaher Handlungsbedarf (Priorität GELB)** – Bald beheben
 3. **🟢 Geplante Maßnahmen (Priorität GRÜN)** – Kann eingeplant werden
-4. **Durchgeführte Reparaturen** – Was wurde erledigt
-5. **Mängelbeseitigung** – Behobene und offene Mängel
-6. **Kostenschätzung** – Übersicht der geschätzten Kosten
-7. **Offene Punkte** – Was noch zu tun ist
+4. **Kostenschätzung** – Übersicht der geschätzten Kosten
+5. **Empfehlungen** – Konkrete Handlungsempfehlungen und nächste Schritte
 
 Regeln:
 - Schreibe in professionellem, sachlichem Stil
 - Gruppiere nach Priorität (rot → gelb → grün)
 - Behalte wichtige Details (Maße, Materialien, Ortsangaben)
 - Verwende EXAKT die Kostenschätzungen aus den Einträgen – erfinde keine eigenen Zahlen
-- Nutze Aufzählungspunkte
+- Nutze Aufzählungspunkte (mit Spiegelstrich -)
 - Erfinde KEINE Informationen – nur was in den Einträgen steht
-- Verwende KEIN Markdown mit ** oder ähnlichem – nutze einfachen Text mit Aufzählungszeichen (•)
+- Nutze Markdown-Formatierung: **fett** für Überschriften, - für Listen
 - Antworte auf Deutsch
 
 Einträge des Tages:
