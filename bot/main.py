@@ -60,9 +60,12 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_eintrag))
     app.add_handler(MessageHandler(filters.PHOTO, foto_eintrag))
     app.add_handler(MessageHandler(filters.VOICE, sprach_eintrag))
-    app.add_handler(MessageHandler(filters.LOCATION, standort_empfangen))
 
-    # 5. Tägliche Erinnerung registrieren (18:00 Uhr)
+    # 5. Standort-Handler in eigener Gruppe (group=1),
+    #    damit er NICHT vom ConversationHandler blockiert werden kann
+    app.add_handler(MessageHandler(filters.LOCATION, standort_empfangen), group=1)
+
+    # 6. Tägliche Erinnerung registrieren (18:00 Uhr)
     erinnerung_registrieren(app.job_queue)
 
     logger.info("Bot läuft! Drücke Ctrl+C zum Beenden.")

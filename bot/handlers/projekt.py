@@ -1,4 +1,5 @@
 """Handler für /projekt, /wechsel, /status – Projektverwaltung."""
+import logging
 from telegram import Update, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, CallbackQueryHandler
 
@@ -7,6 +8,8 @@ from db.models import Benutzer, Projekt, Eintrag
 from bot.keyboards import projekt_auswahl_keyboard, standort_keyboard
 from core.geocoding import reverse_geocode
 from datetime import date
+
+logger = logging.getLogger(__name__)
 
 
 async def projekt_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -203,61 +206,90 @@ async def standort_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def standort_empfangen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Verarbeitet einen geteilten Standort und setzt die Adresse im aktiven Projekt."""
     telegram_id = update.effective_user.id
-    location = update.message.location
+    message = update.effective_message
 
-    if not location:
+    if not message or not message.location:
+        logger.warning("standort_empfangen: Kein Standort in Nachricht (User %s)", telegram_id)
         return
 
+    location = message.location
+    logger.info(
+        "Standort empfangen von User %s: lat=%s, lon=%s",
+        telegram_id, location.latitude, location.longitude,
+    )
+
     # Prüfen ob Benutzer und aktives Projekt existieren
-    with get_session() as session:
-        benutzer = session.query(Benutzer).filter_by(telegram_id=telegram_id).first()
-        if not benutzer:
-            await update.message.reply_text(
-                "Bitte zuerst /start ausführen.",
-                reply_markup=ReplyKeyboardRemove(),
-            )
-            return
+    try:
+        with get_session() as session:
+            benutzer = session.query(Benutzer).filter_by(telegram_id=telegram_id).first()
+            if not benutzer:
+                await message.reply_text(
+                    "Bitte zuerst /start ausführen.",
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+                return
 
-        if not benutzer.aktives_projekt_id:
-            await update.message.reply_text(
-                "Kein aktives Projekt vorhanden.\n"
-                "Erstelle eins mit /projekt <Name>",
-                reply_markup=ReplyKeyboardRemove(),
-            )
-            return
+            if not benutzer.aktives_projekt_id:
+                await message.reply_text(
+                    "Kein aktives Projekt vorhanden.\n"
+                    "Erstelle eins mit /projekt <Name>",
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+                return
 
-        aktives_projekt_id = benutzer.aktives_projekt_id
+            aktives_projekt_id = benutzer.aktives_projekt_id
+            logger.info("Aktives Projekt ID: %s", aktives_projekt_id)
+    except Exception as e:
+        logger.error("DB-Fehler beim Standort-Empfangen (Benutzer-Check): %s", e)
+        await message.reply_text(
+            "❌ Datenbankfehler. Bitte versuche es erneut.",
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        return
 
     # Reverse Geocoding
-    await update.message.reply_text(
+    await message.reply_text(
         "🔍 Ermittle Adresse aus Koordinaten...",
         reply_markup=ReplyKeyboardRemove(),
     )
 
-    geo_result = await reverse_geocode(location.latitude, location.longitude)
+    try:
+        geo_result = await reverse_geocode(location.latitude, location.longitude)
+        logger.info("Geocoding-Ergebnis: %s", geo_result)
+    except Exception as e:
+        logger.error("Geocoding-Exception: %s", e)
+        geo_result = None
 
-    # Alles in einer einzigen Session speichern (Koordinaten + Adresse)
-    with get_session() as session:
-        projekt = session.query(Projekt).get(aktives_projekt_id)
-        if not projekt:
-            await update.message.reply_text("Projekt nicht gefunden.")
-            return
+    # Koordinaten + Adresse speichern
+    try:
+        with get_session() as session:
+            projekt = session.query(Projekt).get(aktives_projekt_id)
+            if not projekt:
+                await message.reply_text("Projekt nicht gefunden.")
+                return
 
-        projekt.latitude = location.latitude
-        projekt.longitude = location.longitude
+            projekt.latitude = location.latitude
+            projekt.longitude = location.longitude
 
-        if geo_result:
-            projekt.adresse = geo_result["adresse"]
+            if geo_result:
+                projekt.adresse = geo_result["adresse"]
+                logger.info("Adresse gespeichert: %s", geo_result["adresse"])
+    except Exception as e:
+        logger.error("DB-Fehler beim Speichern der Geodaten: %s", e)
+        await message.reply_text(
+            "❌ Fehler beim Speichern. Bitte versuche es erneut."
+        )
+        return
 
     if not geo_result:
-        await update.message.reply_text(
+        await message.reply_text(
             f"⚠️ Adresse konnte nicht ermittelt werden.\n\n"
             f"Koordinaten wurden gespeichert:\n"
             f"📍 {location.latitude:.6f}, {location.longitude:.6f}"
         )
         return
 
-    await update.message.reply_text(
+    await message.reply_text(
         f"✅ Adresse für das Projekt gesetzt!\n\n"
         f"📍 **Adresse:** {geo_result['adresse']}\n"
         f"🗺️ **Koordinaten:** {location.latitude:.6f}, {location.longitude:.6f}",
