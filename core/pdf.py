@@ -66,6 +66,7 @@ def generiere_pdf(
     eintraege_text: list,
     fotos: list,
     ki_bericht: str = "",
+    projekt_adresse: str = "",
 ) -> str:
     """
     Generiert einen PDF-Tagesbericht.
@@ -102,6 +103,7 @@ def generiere_pdf(
         fotos=foto_daten,
         ki_bericht=ki_bericht_html,
         erstellt_am=datetime.now().strftime("%d.%m.%Y %H:%M"),
+        projekt_adresse=projekt_adresse,
     )
 
     # Output-Verzeichnis vorbereiten

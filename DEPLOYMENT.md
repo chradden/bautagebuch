@@ -111,7 +111,13 @@ Login mit den Zugangsdaten aus der `.env` (`admin` / `DeinDashboardPasswort`).
 
 ```bash
 cd /opt/bautagebuch
-git pull
+./deploy.sh
+```
+
+Oder manuell:
+
+```bash
+git pull origin main
 docker compose up -d --build
 ```
 
@@ -119,6 +125,57 @@ docker compose up -d --build
 
 ```bash
 docker compose down
+```
+
+---
+
+## Auto-Deployment: Codespace → GitHub → VPS 🚀
+
+Jeder `git push` auf `main` aus dem Codespace löst automatisch ein Deployment auf dem VPS aus. Der GitHub Actions Workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) verbindet sich per SSH auf den VPS und führt `deploy.sh` aus.
+
+### Einmalige Einrichtung (GitHub Secrets)
+
+Im GitHub Repository unter **Settings → Secrets and variables → Actions** folgende Secrets anlegen:
+
+| Secret | Inhalt |
+|--------|--------|
+| `VPS_HOST` | IP-Adresse oder Domain des VPS |
+| `VPS_USER` | SSH-Benutzer (z.B. `root`) |
+| `VPS_SSH_KEY` | Privater SSH-Key (Inhalt von `~/.ssh/id_rsa`) |
+| `VPS_PROJECT_PATH` | Pfad zum Projektverzeichnis (z.B. `/opt/bautagebuch`) |
+
+### SSH-Key für GitHub Actions erstellen
+
+Auf dem VPS einmalig ausführen:
+
+```bash
+# Neues Key-Paar für GitHub Actions erstellen
+ssh-keygen -t ed25519 -C "github-actions-bautagebuch" -f ~/.ssh/github_actions -N ""
+
+# Public Key bei authorized_keys hinterlegen
+cat ~/.ssh/github_actions.pub >> ~/.ssh/authorized_keys
+
+# Private Key anzeigen → Inhalt als VPS_SSH_KEY Secret eintragen
+cat ~/.ssh/github_actions
+```
+
+### Ablauf nach einem Push
+
+```
+git push origin main
+       │
+       ▼
+GitHub Actions (.github/workflows/deploy.yml)
+       │
+       ▼ SSH
+VPS: git pull origin main
+     docker compose down
+     docker compose build --no-cache
+     docker compose up -d --force-recreate
+     docker image prune -f
+       │
+       ▼
+✅ Neue Version läuft auf dem VPS
 ```
 
 ---

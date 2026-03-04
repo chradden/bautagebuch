@@ -152,6 +152,7 @@
         <h1>Instandhaltungsplanung</h1>
         <div class="meta">
             <span><strong>Objekt:</strong> {{ projekt_name }}</span>
+            {% if projekt_adresse %}<span><strong>Adresse:</strong> {{ projekt_adresse }}</span>{% endif %}
             <span><strong>Datum:</strong> {{ datum }}</span>
             <span><strong>Verantwortlich:</strong> {{ bauleiter }}</span>
         </div>

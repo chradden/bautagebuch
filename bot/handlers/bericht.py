@@ -42,6 +42,7 @@ async def bericht_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         projekt_name = projekt.name
         bauleiter_name = benutzer.name
         projekt_id = projekt.id
+        projekt_adresse = projekt.adresse or ""
 
         # Einträge für dieses Datum laden
         eintraege = (
@@ -130,6 +131,7 @@ async def bericht_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             eintraege_text=eintraege_text,
             fotos=fotos,
             ki_bericht=ki_bericht,
+            projekt_adresse=projekt_adresse,
         )
     except Exception as e:
         await update.message.reply_text(f"❌ Fehler bei PDF-Erstellung: {e}")
