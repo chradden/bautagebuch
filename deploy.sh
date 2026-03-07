@@ -1,31 +1,27 @@
 #!/bin/bash
-# ─────────────────────────────────────────────────────────────────────
-# deploy.sh — Schnelles Deployment / Update auf dem VPS
-#
-# Verwendung:
-#   chmod +x deploy.sh
-#   ./deploy.sh
-# ─────────────────────────────────────────────────────────────────────
-
 set -euo pipefail
 
 echo "══════════════════════════════════════════════"
 echo "  Bautagebuch — Deploy"
 echo "══════════════════════════════════════════════"
 
-# Git aktualisieren
-echo "→ Code aktualisieren..."
-git pull origin main
+cd "$(dirname "$0")"
 
-# Container neu bauen und starten
+echo "→ Code vom Remote holen..."
+git fetch origin main --tags
+
+echo "→ Auf origin/main zurücksetzen..."
+git reset --hard origin/main
+
 echo "→ Container stoppen..."
 docker compose down
+
 echo "→ Image neu bauen (kein Cache)..."
 docker compose build --no-cache
+
 echo "→ Container starten..."
 docker compose up -d --force-recreate
 
-# Alte Images aufräumen
 echo "→ Alte Docker-Images aufräumen..."
 docker image prune -f
 
