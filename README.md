@@ -2,6 +2,8 @@
 
 Intelligente Instandhaltungsplanung per Telegram. Erfasse Mängel & Reparaturen (Text, Fotos, Sprache), erhalte **automatische KI-Priorisierung** (🔴🟡🟢) mit **Kostenschätzung** und generiere professionelle PDF-Berichte auf Knopfdruck.
 
+Ausführliche Endnutzer-Dokumentation: [docs/Bedienungsanleitung_Bautagebuch.md](docs/Bedienungsanleitung_Bautagebuch.md)
+
 ---
 
 ## Schnellstart
@@ -50,7 +52,7 @@ python3 run.py
 
 Dies startet gleichzeitig:
 - **Telegram Bot** (Polling)
-- **Web-Dashboard** auf http://localhost:8080
+- **Web-Dashboard** auf http://localhost:8093
 
 Alternativ nur den Bot:
 ```bash
@@ -145,7 +147,7 @@ Die KI schätzt automatisch die Reparaturkosten basierend auf der Beschreibung. 
 
 ### Web-Dashboard
 
-Erreichbar unter **http://localhost:8080** (wenn mit `python3 run.py` gestartet):
+Erreichbar unter **http://localhost:8093** (wenn mit `python3 run.py` gestartet):
 
 - **Objektübersicht** – Alle Projekte mit Statistiken
 - **Projektdetails** – Einträge mit Kategorie-Badges, filtern nach Datum & Kategorie

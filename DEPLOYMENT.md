@@ -4,7 +4,7 @@
 
 Diese Anleitung erklärt, wie du die Instandhaltungsplanung-App auf einem **Hostinger VPS** installierst. Am Ende läuft:
 - **Telegram Bot** – 24/7, reagiert auf Nachrichten
-- **Web-Dashboard** – erreichbar über `http://deine-ip:8080` (oder über Domain)
+- **Web-Dashboard** – erreichbar über `http://deine-ip:8093` (oder über Domain)
 
 ---
 
@@ -102,7 +102,7 @@ docker compose logs --tail 50
 ### Web-Dashboard öffnen:
 
 ```
-http://DEINE-VPS-IP:8080
+http://DEINE-VPS-IP:8093
 ```
 
 Login mit den Zugangsdaten aus der `.env` (`admin` / `DeinDashboardPasswort`).
@@ -281,16 +281,16 @@ systemctl restart instandhaltung
 
 ## Firewall konfigurieren
 
-Hostinger blockiert standardmäßig alle Ports außer 22 (SSH). Du musst Port 8080 freigeben:
+Hostinger blockiert standardmäßig alle Ports außer 22 (SSH). Du musst Port 8093 freigeben:
 
 ### Im Hostinger Panel:
 1. Gehe zu **VPS → Einstellungen → Firewall**
-2. Füge eine Regel hinzu: **Port 8080, TCP, erlauben**
+2. Füge eine Regel hinzu: **Port 8093, TCP, erlauben**
 
 ### Oder per SSH:
 
 ```bash
-ufw allow 8080/tcp
+ufw allow 8093/tcp
 ufw allow 22/tcp
 ufw enable
 ```
@@ -329,7 +329,7 @@ server {
     server_name instandhaltung.deine-domain.de;
 
     location / {
-        proxy_pass http://127.0.0.1:8080;
+        proxy_pass http://127.0.0.1:8093;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -361,7 +361,7 @@ certbot --nginx -d instandhaltung.deine-domain.de
 - [x] **BOT_PASSWORT** in `.env` gesetzt → Nur mit Passwort kann man den Bot nutzen
 - [x] **DASHBOARD_PASSWORT** in `.env` gesetzt → Web-Dashboard per HTTP Basic Auth geschützt
 - [ ] **SSH-Key** statt Passwort verwenden (Hostinger Panel → SSH-Keys)
-- [ ] **Firewall** konfiguriert (nur Ports 22, 80, 443, 8080)
+- [ ] **Firewall** konfiguriert (nur Ports 22, 80, 443, 8093)
 - [ ] **HTTPS** eingerichtet (mit Let's Encrypt / Certbot)
 - [ ] **Regelmäßige Backups** der Datenbank (`data/bautagebuch.db`)
 
@@ -426,7 +426,7 @@ docker compose logs --tail 100  # oder: journalctl -u instandhaltung --tail 100
 docker compose ps  # oder: systemctl status instandhaltung
 
 # Port offen?
-curl http://localhost:8080
+curl http://localhost:8093
 
 # Firewall prüfen
 ufw status
