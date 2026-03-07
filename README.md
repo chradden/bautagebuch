@@ -294,4 +294,4 @@ Siehe **[DEPLOYMENT.md](DEPLOYMENT.md)** für eine ausführliche Schritt-für-Sc
 
 ## Lizenz
 
-MIT
+MIT - oder so
