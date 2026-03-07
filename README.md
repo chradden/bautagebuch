@@ -2,7 +2,9 @@
 
 Intelligente Instandhaltungsplanung per Telegram. Erfasse Mängel & Reparaturen (Text, Fotos, Sprache), erhalte **automatische KI-Priorisierung** (🔴🟡🟢) mit **Kostenschätzung** und generiere professionelle PDF-Berichte auf Knopfdruck.
 
-Ausführliche Endnutzer-Dokumentation: [docs/Bedienungsanleitung_Bautagebuch.md](docs/Bedienungsanleitung_Bautagebuch.md)
+Hinweis: Das Repository und einige technische Pfade heißen aus historischen Gründen noch `bautagebuch`, die Anwendung selbst ist inzwischen eine Instandhaltungsplanungs-App.
+
+Ausführliche Endnutzer-Dokumentation: [docs/Bedienungsanleitung_Instandhaltungsplanung.md](docs/Bedienungsanleitung_Instandhaltungsplanung.md)
 
 ---
 

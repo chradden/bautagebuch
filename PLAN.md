@@ -1,8 +1,8 @@
-# Bautagebuch App – Umsetzungsplan
+# Instandhaltungsplanung – Umsetzungsplan
 
 ## 1. Überblick
 
-Das System ermöglicht es **Bauleitern**, per **Telegram** Bautagebuch-Einträge zu erfassen (Text, Sprachnachrichten, Fotos). Eine **KI** verarbeitet diese Eingaben und generiert automatisch professionelle **PDF-Tagesberichte**.
+Das System ermöglicht es **Bauleitern** und verantwortlichen Objektbetreuern, per **Telegram** Instandhaltungseinträge zu erfassen (Text, Sprachnachrichten, Fotos). Eine **KI** verarbeitet diese Eingaben und generiert automatisch professionelle **PDF-Tagesberichte**.
 
 ```
 ┌──────────────┐     ┌──────────────────┐     ┌───────────────────┐
@@ -119,7 +119,7 @@ CREATE TABLE wetter (
 
 ### 4.2 Nachrichten-Verarbeitung (ohne Befehl)
 
-Jede normale Nachricht wird als Bautagebuch-Eintrag erfasst:
+Jede normale Nachricht wird als Instandhaltungseintrag erfasst:
 
 - **Textnachricht** → Direkt als Eintrag speichern + KI-Kategorisierung
 - **Foto(s)** → Speichern + KI-Bildbeschreibung + optionaler Begleittext
@@ -130,7 +130,7 @@ Jede normale Nachricht wird als Bautagebuch-Eintrag erfasst:
 
 ```
 Bauleiter: /start
-Bot:       Willkommen beim Bautagebuch! 🏗️
+Bot:       Willkommen bei der Instandhaltungsplanung! 🔧
            Bitte geben Sie Ihren Namen ein.
 
 Bauleiter: Max Mustermann
@@ -163,7 +163,7 @@ Bot:       📄 Tagesbericht wird erstellt...
 
 ```python
 SYSTEM_PROMPT = """
-Du bist ein Bautagebuch-Assistent. Klassifiziere und strukturiere
+Du bist ein Assistent für Instandhaltungsplanung. Klassifiziere und strukturiere
 den folgenden Baustelleneintrag.
 
 Gib zurück als JSON:
@@ -181,7 +181,7 @@ Gib zurück als JSON:
 
 ```python
 BERICHT_PROMPT = """
-Erstelle aus den folgenden Bautagebuch-Einträgen einen professionellen
+Erstelle aus den folgenden Instandhaltungseinträgen einen professionellen
 Tagesbericht nach VOB-Standard. Strukturiere nach:
 
 1. Allgemeine Angaben (Projekt, Datum, Wetter)
@@ -308,7 +308,7 @@ bautagebuch/
 - [ ] Mehrbenutzer pro Projekt (Polier, Architekt)
 - [ ] PostgreSQL Migration für Produktion
 - [ ] Foto-Galerie im Web-Dashboard
-- [ ] Export: Gesamtes Bautagebuch als PDF-Sammelband
+- [ ] Export: Gesamte Instandhaltungsdokumentation als PDF-Sammelband
 - [ ] Schnittstelle zu Bauprojekt-Software (z.B. PlanRadar)
 
 ---

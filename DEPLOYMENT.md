@@ -2,6 +2,8 @@
 
 ## Übersicht
 
+Hinweis: Das Repository und die Server-Pfade heißen aus historischen Gründen weiterhin `bautagebuch`. Die fachliche Anwendung ist jedoch die Instandhaltungsplanung.
+
 Diese Anleitung erklärt, wie du die Instandhaltungsplanung-App auf einem **Hostinger VPS** installierst. Am Ende läuft:
 - **Telegram Bot** – 24/7, reagiert auf Nachrichten
 - **Web-Dashboard** – erreichbar über `http://deine-ip:8093` (oder über Domain)

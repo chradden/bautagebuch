@@ -1,8 +1,10 @@
-# Bautagebuch – Bedienungsanleitung
+# Instandhaltungsplanung – Bedienungsanleitung
 
 ## Willkommen
 
-Das Bautagebuch ist eine Kombination aus Telegram-Bot und Web-Dashboard. Sie erfassen Baustellen- oder Instandhaltungsinformationen direkt per Smartphone und erhalten daraus strukturierte Einträge, PDF-Berichte und CSV-Exporte.
+Die Instandhaltungsplanung ist eine Kombination aus Telegram-Bot und Web-Dashboard. Sie erfassen Mängel, Reparaturen, Prüfungen und sonstige Instandhaltungsinformationen direkt per Smartphone und erhalten daraus strukturierte Einträge, PDF-Berichte und CSV-Exporte.
+
+Hinweis: Das Repository und einige interne Pfade heißen historisch noch `bautagebuch`. Für Anwender ist die App jedoch eine Instandhaltungsplanungs-App.
 
 Die App ist für den einfachen Einsatz im Alltag gedacht:
 
@@ -134,7 +136,7 @@ Die App kennt drei praktische Wege für Einträge:
 
 ### 5.1 Textnachrichten
 
-Jede normale Textnachricht wird als Bautagebuch-Eintrag gespeichert und durch die KI ausgewertet.
+Jede normale Textnachricht wird als Eintrag zur Instandhaltungsdokumentation gespeichert und durch die KI ausgewertet.
 
 Beispiele:
 
