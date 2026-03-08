@@ -133,13 +133,14 @@ Gib den Bericht AUSSCHLIESSLICH als Markdown aus und verwende EXAKT diese drei P
 ## 🟢 Geplante Maßnahmen (Priorität GRÜN)
 
 Unter jeder Überschrift muss genau eine Markdown-Tabelle mit diesen Spalten stehen:
-| Eintrag | Zustand | Problem | Maßnahme | Dringlichkeit | Kostenschätzung | Fotodokumentation |
+| Eintrag | Details | Bild | Bildbeschreibung |
 
 Regeln:
 - Ordne jeden Eintrag genau einer Priorität zu
 - Gruppiere strikt nach Priorität in der Reihenfolge rot → gelb → grün
 - Verwende pro Eintrag eine Tabellenzeile mit "Nr. X" in der Spalte Eintrag
-- Die Spalte Kostenschätzung muss immer befüllt sein
+- Schreibe in die Spalte Details alle folgenden Punkte untereinander in genau diesem Format und genau dieser Reihenfolge: Zustand, Problem, Maßnahme, Dringlichkeit, Kostenschätzung
+- Nutze innerhalb der Details-Spalte HTML-Zeilenumbrüche mit <br>, damit die Punkte untereinander stehen
 - Wenn eine Kostenschätzung im Eintrag vorhanden ist, verwende diese als Grundlage
 - Wenn keine Kostenschätzung im Eintrag vorhanden ist, leite aus Beschreibung, Schadensbild und Aufwand eine grobe realistische Spannweite in Euro ab
 - Verwende keine Platzhalter wie 'nicht angegeben' oder 'nicht einschätzbar'
@@ -148,8 +149,8 @@ Regeln:
 - Erfinde KEINE Informationen – nutze nur Inhalte aus den Einträgen
 - Der Abschnitt Empfehlungen darf NICHT vorkommen
 - Eine separate Kategorie oder Überschrift für Kostenschätzungen darf NICHT vorkommen
-- Beschreibe in der Spalte Fotodokumentation nur kurz die vorhandenen Fotos, z.B. '2 Fotos vorhanden' oder '1 Foto vorhanden'
-- Wenn eine Prioritätsgruppe leer ist, gib in der Tabelle genau eine Zeile aus: | Keine Einträge | - | - | - | - | - | - |
+- Schreibe in die Spalten Bild und Bildbeschreibung nur knappe Platzhalter, da diese im PDF visuell ersetzt werden
+- Wenn eine Prioritätsgruppe leer ist, gib in der Tabelle genau eine Zeile aus: | Keine Einträge | - | - | - |
 - Antworte auf Deutsch
 
 Einträge des Tages:

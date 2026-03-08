@@ -31,35 +31,53 @@ def _build_eintrag_foto_map(eintraege_text: list) -> dict[int, list[dict]]:
     return eintrag_fotos
 
 
-def _build_photo_cell(photos: list[dict]) -> str:
-    """Rendert die Fotodokumentation für eine Tabellenzelle."""
+def _build_photo_image_cell(photos: list[dict]) -> str:
+    """Rendert die Bildspalte für eine Tabellenzelle."""
     if not photos:
-        return '<span class="foto-placeholder">Keine Fotos</span>'
+        return '<span class="foto-placeholder">Kein Bild</span>'
 
     items = []
     for photo in photos:
-        beschreibung = html.escape(photo.get("beschreibung", ""))
         items.append(
             '<div class="foto-item">'
             f'<img src="file://{photo["dateipfad_abs"]}" alt="Fotodokumentation">'
-            f'<div class="foto-note">{beschreibung}</div>'
             '</div>'
         )
 
     return f'<div class="foto-cell">{"".join(items)}</div>'
 
 
+def _build_photo_description_cell(photos: list[dict]) -> str:
+    """Rendert die Bildbeschreibungen für eine Tabellenzelle."""
+    if not photos:
+        return '<span class="foto-placeholder">Keine Bildbeschreibung</span>'
+
+    items = []
+    for index, photo in enumerate(photos, 1):
+        beschreibung = html.escape(photo.get("beschreibung", "")) or "Ohne Beschreibung"
+        items.append(
+            '<div class="foto-description-item">'
+            f'<div class="foto-description-label">Bild {index}</div>'
+            f'<div class="foto-note">{beschreibung}</div>'
+            '</div>'
+        )
+
+    return f'<div class="foto-description-cell">{"".join(items)}</div>'
+
+
 def _inject_entry_photos(html_content: str, eintrag_fotos: dict[int, list[dict]]) -> str:
-    """Ergänzt die KI-Tabellen um eine visuelle Fotospalte je Eintrag."""
+    """Ergänzt die KI-Tabellen um Bild- und Beschreibungs-Spalten je Eintrag."""
     def update_header(match):
         row_html = match.group(0)
         headers = re.findall(r'<th>(.*?)</th>', row_html, re.DOTALL | re.IGNORECASE)
         if not headers:
             return row_html
-        if len(headers) >= 7:
-            headers[-1] = 'Fotodokumentation'
+        if len(headers) >= 4:
+            headers = headers[:4]
+            headers[2] = 'Bild'
+            headers[3] = 'Bildbeschreibung'
         else:
-            headers.append('Fotodokumentation')
+            headers.extend(['Bild', 'Bildbeschreibung'])
         rebuilt = ''.join(f'<th>{header}</th>' for header in headers)
         return f'<tr>{rebuilt}</tr>'
 
@@ -75,11 +93,14 @@ def _inject_entry_photos(html_content: str, eintrag_fotos: dict[int, list[dict]]
         if nr_match:
             photos = eintrag_fotos.get(int(nr_match.group(1)), [])
 
-        photo_cell = _build_photo_cell(photos)
-        if len(cells) >= 7:
-            cells[-1] = photo_cell
+        image_cell = _build_photo_image_cell(photos)
+        description_cell = _build_photo_description_cell(photos)
+        if len(cells) >= 4:
+            cells = cells[:4]
+            cells[2] = image_cell
+            cells[3] = description_cell
         else:
-            cells.append(photo_cell)
+            cells.extend([image_cell, description_cell])
 
         rebuilt = ''.join(f'<td>{cell}</td>' for cell in cells)
         return f'<tr>{rebuilt}</tr>'
