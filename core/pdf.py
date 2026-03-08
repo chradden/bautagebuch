@@ -65,6 +65,20 @@ def _build_photo_description_cell(photos: list[dict]) -> str:
     return f'<div class="foto-description-cell">{"".join(items)}</div>'
 
 
+def _format_details_cell(cell_html: str) -> str:
+    """Formatiert fachliche Labels im Detailblock robust als visuelle Tags."""
+    labels = ["Zustand", "Problem", "Maßnahme", "Dringlichkeit", "Kostenschätzung"]
+    formatted = cell_html
+    for label in labels:
+        pattern = rf'(^|<br\s*/?>)\s*(?:<strong>)?{label}:?(?:</strong>)?\s*'
+        replacement = (
+            rf'\1<span class="detail-label">{label}</span>'
+            '<span class="detail-separator">:</span> '
+        )
+        formatted = re.sub(pattern, replacement, formatted, flags=re.IGNORECASE)
+    return formatted
+
+
 def _inject_entry_photos(html_content: str, eintrag_fotos: dict[int, list[dict]]) -> str:
     """Ergänzt die KI-Tabellen um Bild- und Beschreibungs-Spalten je Eintrag."""
     def update_header(match):
@@ -78,7 +92,11 @@ def _inject_entry_photos(html_content: str, eintrag_fotos: dict[int, list[dict]]
             headers[3] = 'Bildbeschreibung'
         else:
             headers.extend(['Bild', 'Bildbeschreibung'])
-        rebuilt = ''.join(f'<th>{header}</th>' for header in headers)
+        header_classes = ["entry-col", "details-col", "image-col", "image-description-col"]
+        rebuilt = ''.join(
+            f'<th class="{header_classes[index]}">{header}</th>'
+            for index, header in enumerate(headers)
+        )
         return f'<tr>{rebuilt}</tr>'
 
     def update_row(match):
@@ -97,12 +115,17 @@ def _inject_entry_photos(html_content: str, eintrag_fotos: dict[int, list[dict]]
         description_cell = _build_photo_description_cell(photos)
         if len(cells) >= 4:
             cells = cells[:4]
+            cells[1] = _format_details_cell(cells[1])
             cells[2] = image_cell
             cells[3] = description_cell
         else:
             cells.extend([image_cell, description_cell])
 
-        rebuilt = ''.join(f'<td>{cell}</td>' for cell in cells)
+        cell_classes = ["entry-col", "details-col", "image-col", "image-description-col"]
+        rebuilt = ''.join(
+            f'<td class="{cell_classes[index]}">{cell}</td>'
+            for index, cell in enumerate(cells)
+        )
         return f'<tr>{rebuilt}</tr>'
 
     html_content = re.sub(
