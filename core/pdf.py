@@ -76,11 +76,11 @@ def _shorten_photo_description(text: str) -> str:
 
     sentences = re.split(r'(?<=[.!?])\s+', clean_text)
     summary = sentences[0]
-    if len(summary) < 120 and len(sentences) > 1:
+    if len(summary) < 90 and len(sentences) > 1:
         summary = f"{summary} {sentences[1]}"
 
-    if len(summary) > 220:
-        summary = summary[:217].rstrip() + "..."
+    if len(summary) > 150:
+        summary = summary[:147].rstrip() + "..."
 
     return summary
 
