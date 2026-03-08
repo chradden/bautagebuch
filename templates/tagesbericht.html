@@ -52,13 +52,6 @@
             display: flex;
             justify-content: space-between;
         }
-        .unterschrift {
-            margin-top: 50px;
-            border-top: 1px solid #333;
-            width: 250px;
-            padding-top: 5px;
-            font-size: 10pt;
-        }
         .ki-bericht {
             line-height: 1.6;
         }
@@ -93,6 +86,16 @@
             border-collapse: collapse;
             table-layout: fixed;
             margin: 0;
+        }
+        .ki-bericht thead {
+            display: table-header-group;
+        }
+        .ki-bericht tbody {
+            display: table-row-group;
+        }
+        .ki-bericht tr {
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
         .ki-bericht th.entry-col, .ki-bericht td.entry-col { width: 8%; }
         .ki-bericht th.details-col, .ki-bericht td.details-col { width: 32%; }
@@ -141,7 +144,8 @@
             border: 1px solid #d7dee7;
             border-radius: 8px;
             overflow: hidden;
-            page-break-inside: avoid;
+            page-break-inside: auto;
+            break-inside: auto;
         }
         .prio-section h2,
         .prio-section h3 {
@@ -186,6 +190,8 @@
         }
         .foto-description-cell {
             display: block;
+            width: 100%;
+            max-width: 100%;
         }
         .foto-description-item {
             padding: 8px 10px;
@@ -193,6 +199,10 @@
             border: 1px solid #ccd6e2;
             border-radius: 4px;
             margin-bottom: 10px;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
         }
         .foto-description-label {
             font-size: 8pt;
@@ -206,6 +216,10 @@
             font-size: 9pt;
             line-height: 1.35;
             color: #435364;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            white-space: normal;
+            max-width: 100%;
         }
         .foto-placeholder {
             color: #7b8794;
@@ -253,6 +267,27 @@
         .prio-rot { background: #e74c3c; color: white; font-weight: bold; }
         .prio-gelb { background: #f1c40f; color: #333; font-weight: bold; }
         .prio-gruen { background: #27ae60; color: white; }
+        .kosten-summary {
+            margin-top: 16px;
+            padding: 12px 14px;
+            border: 1px solid #cfd8e3;
+            border-radius: 8px;
+            background: #f8fafc;
+            page-break-inside: avoid;
+        }
+        .kosten-summary-title {
+            font-size: 10pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .kosten-summary-value {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #1f2d3d;
+        }
     </style>
 </head>
 <body>
@@ -271,13 +306,16 @@
         <h2>KI-Analyse & Priorisierung</h2>
         <div class="content ki-bericht">
             {{ ki_bericht | safe }}
+
+            {% if gesamt_kostenschaetzung %}
+            <div class="kosten-summary">
+                <div class="kosten-summary-title">Gesamtkostenschätzung</div>
+                <div class="kosten-summary-value">{{ gesamt_kostenschaetzung }}</div>
+            </div>
+            {% endif %}
         </div>
     </div>
     {% endif %}
-
-    <div class="unterschrift">
-        Unterschrift Verantwortlicher
-    </div>
 
     <div class="footer">
         <span>Erstellt am {{ erstellt_am }}</span>

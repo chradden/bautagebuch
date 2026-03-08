@@ -14,6 +14,57 @@ TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templat
 env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 
 
+def _parse_cost_range(cost_text: str) -> tuple[float, float] | None:
+    """Extrahiert aus einer Kostenschätzung eine untere und obere Grenze."""
+    if not cost_text:
+        return None
+
+    matches = re.findall(r'\d[\d\.,]*', cost_text)
+    if not matches:
+        return None
+
+    values = []
+    for match in matches[:2]:
+        normalized = match.replace('.', '').replace(',', '.')
+        try:
+            values.append(float(normalized))
+        except ValueError:
+            continue
+
+    if not values:
+        return None
+    if len(values) == 1:
+        return values[0], values[0]
+    return values[0], values[1]
+
+
+def _format_euro_amount(amount: float) -> str:
+    """Formatiert einen Euro-Betrag ohne Nachkommastellen mit deutschem Tausenderpunkt."""
+    rounded = int(round(amount))
+    return f"{rounded:,}".replace(',', '.') + ' Euro'
+
+
+def _build_total_cost_estimate(eintraege_text: list) -> str:
+    """Berechnet eine Gesamtkostenschätzung aus allen Eintragskosten."""
+    total_min = 0.0
+    total_max = 0.0
+    found = False
+
+    for eintrag in eintraege_text:
+        cost_range = _parse_cost_range(getattr(eintrag, 'kostenschaetzung', ''))
+        if not cost_range:
+            continue
+        found = True
+        total_min += cost_range[0]
+        total_max += cost_range[1]
+
+    if not found:
+        return ''
+    if round(total_min) == round(total_max):
+        return _format_euro_amount(total_min)
+    return f"{_format_euro_amount(total_min)} bis {_format_euro_amount(total_max)}"
+
+
 def _build_eintrag_foto_map(eintraege_text: list) -> dict[int, list[dict]]:
     """Erzeugt eine Zuordnung von Eintragsnummern zu Foto-Metadaten."""
     eintrag_fotos = {}
@@ -261,6 +312,7 @@ def generiere_pdf(
         eintraege_text=eintraege_text,
         fotos=foto_daten,
         ki_bericht=ki_bericht_html,
+        gesamt_kostenschaetzung=_build_total_cost_estimate(eintraege_text),
         erstellt_am=datetime.now().strftime("%d.%m.%Y %H:%M"),
         projekt_adresse=projekt_adresse,
     )
