@@ -1,6 +1,7 @@
 """PDF-Generierung für Tagesberichte."""
 import os
 import re
+import html
 import markdown
 from datetime import date, datetime
 from jinja2 import Environment, FileSystemLoader
@@ -13,7 +14,99 @@ TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templat
 env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 
 
-def _apply_prio_colors(html: str) -> str:
+def _build_eintrag_foto_map(eintraege_text: list) -> dict[int, list[dict]]:
+    """Erzeugt eine Zuordnung von Eintragsnummern zu Foto-Metadaten."""
+    eintrag_fotos = {}
+    for index, eintrag in enumerate(eintraege_text, 1):
+        fotos = []
+        for foto in getattr(eintrag, "fotos", []):
+            dateipfad = foto.get("dateipfad")
+            if not dateipfad:
+                continue
+            fotos.append({
+                "dateipfad_abs": os.path.abspath(dateipfad),
+                "beschreibung": foto.get("beschreibung", ""),
+            })
+        eintrag_fotos[index] = fotos
+    return eintrag_fotos
+
+
+def _build_photo_cell(photos: list[dict]) -> str:
+    """Rendert die Fotodokumentation für eine Tabellenzelle."""
+    if not photos:
+        return '<span class="foto-placeholder">Keine Fotos</span>'
+
+    items = []
+    for photo in photos:
+        beschreibung = html.escape(photo.get("beschreibung", ""))
+        items.append(
+            '<div class="foto-item">'
+            f'<img src="file://{photo["dateipfad_abs"]}" alt="Fotodokumentation">'
+            f'<div class="foto-note">{beschreibung}</div>'
+            '</div>'
+        )
+
+    return f'<div class="foto-cell">{"".join(items)}</div>'
+
+
+def _inject_entry_photos(html_content: str, eintrag_fotos: dict[int, list[dict]]) -> str:
+    """Ergänzt die KI-Tabellen um eine visuelle Fotospalte je Eintrag."""
+    def update_header(match):
+        row_html = match.group(0)
+        headers = re.findall(r'<th>(.*?)</th>', row_html, re.DOTALL | re.IGNORECASE)
+        if not headers:
+            return row_html
+        if len(headers) >= 7:
+            headers[-1] = 'Fotodokumentation'
+        else:
+            headers.append('Fotodokumentation')
+        rebuilt = ''.join(f'<th>{header}</th>' for header in headers)
+        return f'<tr>{rebuilt}</tr>'
+
+    def update_row(match):
+        row_html = match.group(0)
+        cells = re.findall(r'<td>(.*?)</td>', row_html, re.DOTALL | re.IGNORECASE)
+        if not cells:
+            return row_html
+
+        cell_text = re.sub(r'<.*?>', '', cells[0])
+        nr_match = re.search(r'Nr\.\s*(\d+)', cell_text)
+        photos = []
+        if nr_match:
+            photos = eintrag_fotos.get(int(nr_match.group(1)), [])
+
+        photo_cell = _build_photo_cell(photos)
+        if len(cells) >= 7:
+            cells[-1] = photo_cell
+        else:
+            cells.append(photo_cell)
+
+        rebuilt = ''.join(f'<td>{cell}</td>' for cell in cells)
+        return f'<tr>{rebuilt}</tr>'
+
+    html_content = re.sub(
+        r'<thead>\s*<tr>.*?</tr>\s*</thead>',
+        lambda match: '<thead>' + update_header(re.search(r'<tr>.*</tr>', match.group(0), re.DOTALL | re.IGNORECASE)) + '</thead>',
+        html_content,
+        count=0,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+    html_content = re.sub(
+        r'<tbody>(.*?)</tbody>',
+        lambda tbody_match: '<tbody>' + re.sub(
+            r'<tr>.*?</tr>',
+            update_row,
+            tbody_match.group(1),
+            flags=re.DOTALL | re.IGNORECASE,
+        ) + '</tbody>',
+        html_content,
+        count=0,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+    return html_content
+
+
+def _apply_prio_colors(html_content: str) -> str:
     """Umschließt Prioritäts-Abschnitte (ROT/GELB/GRÜN) mit farbigen Karten."""
     # Muster: <h...>...ROT...</h...> gefolgt von Inhalt bis zum nächsten <h...> oder Ende
     # Wir splitten nach Überschriften und wrappen die passenden Sektionen
@@ -24,7 +117,7 @@ def _apply_prio_colors(html: str) -> str:
         re.DOTALL | re.IGNORECASE,
     )
 
-    parts = section_pattern.split(html)
+    parts = section_pattern.split(html_content)
     result = []
     current_prio = None
 
@@ -85,6 +178,8 @@ def generiere_pdf(
             "uhrzeit": getattr(foto, 'uhrzeit', None),
         })
 
+    eintrag_fotos = _build_eintrag_foto_map(eintraege_text)
+
     # KI-Bericht: Markdown → HTML konvertieren + Prio-Farben
     ki_bericht_html = ""
     if ki_bericht:
@@ -92,7 +187,7 @@ def generiere_pdf(
             ki_bericht,
             extensions=["tables", "sane_lists"],
         )
-        # Prio-Sektionen farblich markieren (farbiger Seitenrand)
+        ki_bericht_html = _inject_entry_photos(ki_bericht_html, eintrag_fotos)
         ki_bericht_html = _apply_prio_colors(ki_bericht_html)
 
     html_content = template.render(

@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from db.database import get_session
-from db.models import Benutzer, Projekt, Eintrag, Foto, Tagesbericht
+from db.models import Benutzer, Projekt, Eintrag, Tagesbericht
 from core.pdf import generiere_pdf
 from core.ki import generiere_bericht_text
 
@@ -63,6 +63,12 @@ async def bericht_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         eintraege_daten = []
         for e in eintraege:
             foto_beschreibungen = [f.beschreibung for f in e.fotos if f.beschreibung]
+            foto_dateien = []
+            for f in e.fotos:
+                foto_dateien.append({
+                    "dateipfad": f.dateipfad,
+                    "beschreibung": f.beschreibung or e.rohinhalt or "",
+                })
             eintraege_daten.append({
                 "typ": e.typ,
                 "uhrzeit": e.uhrzeit.strftime('%H:%M') if e.uhrzeit else "",
@@ -72,6 +78,7 @@ async def bericht_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "prioritaet": e.prioritaet or "gelb",
                 "kostenschaetzung": e.kostenschaetzung or "",
                 "foto_beschreibungen": foto_beschreibungen,
+                "foto_dateien": foto_dateien,
             })
         foto_daten = []
         for e in eintraege:
@@ -102,15 +109,13 @@ async def bericht_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Einfache Objekte für das Template
     class EintragView:
         def __init__(self, d):
-            self.uhrzeit = d["uhrzeit"]  # already formatted string
+            self.uhrzeit = d["uhrzeit"]
             self.rohinhalt = d["rohinhalt"]
             self.kategorie = d["kategorie"]
             self.ki_zusammenfassung = d["ki_zusammenfassung"]
             self.prioritaet = d.get("prioritaet", "gelb")
             self.kostenschaetzung = d.get("kostenschaetzung", "")
-            # Override strftime for template compatibility
-            def strftime_compat(fmt):
-                return d["uhrzeit"]
+            self.fotos = d.get("foto_dateien", [])
             self.uhrzeit_str = d["uhrzeit"]
 
     class FotoView:

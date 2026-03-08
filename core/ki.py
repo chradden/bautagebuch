@@ -19,7 +19,7 @@ Antworte NUR mit validem JSON (kein Markdown, kein ```):
   "kategorie": "reparatur|maengelbeseitigung|wartung|pruefung|sicherheit|sonstiges",
   "prioritaet": "rot|gelb|gruen",
   "zusammenfassung": "Kurze, professionelle Zusammenfassung in einem Satz",
-  "kostenschaetzung": "Geschätzte Kosten als Text, z.B. '500-1.000 €' oder 'gering' wenn unklar",
+    "kostenschaetzung": "Geschätzte Kosten als Text, z.B. '500-1.000 €' oder 'unter 500 €'",
   "handlungsbedarf": false
 }
 
@@ -38,7 +38,8 @@ Priorisierung:
 
 Kostenschätzung:
 - Schätze die Kosten realistisch basierend auf dem Aufwand
-- Bei unklaren Angaben: 'nicht einschätzbar'"""
+- Gib IMMER eine grobe realistische Spannweite oder Größenordnung in Euro an
+- Verwende keine Platzhalter wie 'nicht einschätzbar' oder 'nicht angegeben'"""
 
 
 def kategorisiere_eintrag(text: str) -> dict:
@@ -132,21 +133,23 @@ Gib den Bericht AUSSCHLIESSLICH als Markdown aus und verwende EXAKT diese drei P
 ## 🟢 Geplante Maßnahmen (Priorität GRÜN)
 
 Unter jeder Überschrift muss genau eine Markdown-Tabelle mit diesen Spalten stehen:
-| Eintrag | Zustand | Problem | Maßnahme | Dringlichkeit | Kostenschätzung |
+| Eintrag | Zustand | Problem | Maßnahme | Dringlichkeit | Kostenschätzung | Fotodokumentation |
 
 Regeln:
 - Ordne jeden Eintrag genau einer Priorität zu
 - Gruppiere strikt nach Priorität in der Reihenfolge rot → gelb → grün
 - Verwende pro Eintrag eine Tabellenzeile mit "Nr. X" in der Spalte Eintrag
 - Die Spalte Kostenschätzung muss immer befüllt sein
-- Verwende EXAKT die vorhandene Kostenschätzung aus den Einträgen; erfinde keine Zahlen
-- Falls keine Kostenschätzung vorliegt, schreibe "nicht angegeben"
+- Wenn eine Kostenschätzung im Eintrag vorhanden ist, verwende diese als Grundlage
+- Wenn keine Kostenschätzung im Eintrag vorhanden ist, leite aus Beschreibung, Schadensbild und Aufwand eine grobe realistische Spannweite in Euro ab
+- Verwende keine Platzhalter wie 'nicht angegeben' oder 'nicht einschätzbar'
 - Schreibe in professionellem, sachlichem Stil
 - Behalte wichtige Details wie Maße, Materialien und Ortsangaben bei
 - Erfinde KEINE Informationen – nutze nur Inhalte aus den Einträgen
 - Der Abschnitt Empfehlungen darf NICHT vorkommen
 - Eine separate Kategorie oder Überschrift für Kostenschätzungen darf NICHT vorkommen
-- Wenn eine Prioritätsgruppe leer ist, gib in der Tabelle genau eine Zeile aus: | Keine Einträge | - | - | - | - | - |
+- Beschreibe in der Spalte Fotodokumentation nur kurz die vorhandenen Fotos, z.B. '2 Fotos vorhanden' oder '1 Foto vorhanden'
+- Wenn eine Prioritätsgruppe leer ist, gib in der Tabelle genau eine Zeile aus: | Keine Einträge | - | - | - | - | - | - |
 - Antworte auf Deutsch
 
 Einträge des Tages:
@@ -161,7 +164,7 @@ def generiere_bericht_text(eintraege: list[dict]) -> str:
         inhalt = e.get("rohinhalt", "")
         kategorie = e.get("kategorie", "")
         prio = e.get("prioritaet", "")
-        kosten = e.get("kostenschaetzung") or "nicht angegeben"
+        kosten = e.get("kostenschaetzung") or "durch KI ableiten"
         foto_beschreibungen = e.get("foto_beschreibungen", [])
 
         eintraege_text += f"[Nr. {i}] ({typ}, {kategorie}, Priorität: {prio})"

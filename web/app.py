@@ -296,6 +296,12 @@ async def bericht_generieren(
         eintraege_daten = []
         for e in eintraege:
             foto_beschreibungen = [f.beschreibung for f in e.fotos if f.beschreibung]
+            foto_dateien = []
+            for f in e.fotos:
+                foto_dateien.append({
+                    "dateipfad": f.dateipfad,
+                    "beschreibung": f.beschreibung or e.rohinhalt or "",
+                })
             eintraege_daten.append({
                 "typ": e.typ,
                 "uhrzeit": e.uhrzeit.strftime("%H:%M") if e.uhrzeit else "",
@@ -305,6 +311,7 @@ async def bericht_generieren(
                 "prioritaet": e.prioritaet or "gelb",
                 "kostenschaetzung": e.kostenschaetzung or "",
                 "foto_beschreibungen": foto_beschreibungen,
+                "foto_dateien": foto_dateien,
             })
 
         foto_daten = []
@@ -329,7 +336,7 @@ async def bericht_generieren(
             session.commit()
 
     # KI-Zusammenfassung generieren
-    logger.info(f"Generiere Bericht für Projekt {projekt_id}, Datum {berichtsdatum}")
+    logger.info("Generiere Bericht für Projekt %s, Datum %s", projekt_id, berichtsdatum)
     ki_bericht = generiere_bericht_text(eintraege_daten)
 
     # View-Objekte für PDF-Template
@@ -341,6 +348,7 @@ async def bericht_generieren(
             self.ki_zusammenfassung = d["ki_zusammenfassung"]
             self.prioritaet = d.get("prioritaet", "gelb")
             self.kostenschaetzung = d.get("kostenschaetzung", "")
+            self.fotos = d.get("foto_dateien", [])
             self.uhrzeit_str = d["uhrzeit"]
 
     class FotoView:
@@ -366,7 +374,7 @@ async def bericht_generieren(
             ki_bericht=ki_bericht,
         )
     except Exception as e:
-        logger.error(f"PDF-Erstellung fehlgeschlagen: {e}")
+        logger.error("PDF-Erstellung fehlgeschlagen: %s", e)
         return HTMLResponse(f"<h1>Fehler bei PDF-Erstellung</h1><p>{e}</p>", status_code=500)
 
     # PDF-Pfad in DB speichern
@@ -379,7 +387,7 @@ async def bericht_generieren(
         if tb:
             tb.pdf_pfad = pdf_pfad
 
-    logger.info(f"Bericht erstellt: {pdf_pfad}")
+    logger.info("Bericht erstellt: %s", pdf_pfad)
     return RedirectResponse(
         url=f"/projekt/{projekt_id}?erfolg=bericht_erstellt&datum={datum}",
         status_code=303,
