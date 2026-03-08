@@ -156,19 +156,34 @@
         .foto-cell {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            align-items: center;
+            gap: 10px;
         }
         .foto-item {
             width: 100%;
+        }
+        .foto-image-label {
+            font-size: 8pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .foto-image-frame {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 240px;
+            padding: 8px;
+            background: #ffffff;
+            border: 1px solid #ccd6e2;
+            border-radius: 4px;
         }
         .foto-item img {
             width: 100%;
             height: 220px;
             object-fit: contain;
             background: #fff;
-            border: 1px solid #cfd8e3;
-            border-radius: 4px;
             display: block;
         }
         .foto-description-cell {
@@ -181,6 +196,7 @@
             background: #ffffff;
             border: 1px solid #ccd6e2;
             border-radius: 4px;
+            min-height: 240px;
         }
         .foto-description-label {
             font-size: 8pt;

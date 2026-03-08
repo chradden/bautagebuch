@@ -37,10 +37,13 @@ def _build_photo_image_cell(photos: list[dict]) -> str:
         return '<span class="foto-placeholder">Kein Bild</span>'
 
     items = []
-    for photo in photos:
+    for index, photo in enumerate(photos, 1):
         items.append(
             '<div class="foto-item">'
+            f'<div class="foto-image-label">Bild {index}</div>'
+            '<div class="foto-image-frame">'
             f'<img src="file://{photo["dateipfad_abs"]}" alt="Fotodokumentation">'
+            '</div>'
             '</div>'
         )
 
@@ -54,7 +57,7 @@ def _build_photo_description_cell(photos: list[dict]) -> str:
 
     items = []
     for index, photo in enumerate(photos, 1):
-        beschreibung = html.escape(photo.get("beschreibung", "")) or "Ohne Beschreibung"
+        beschreibung = html.escape(_shorten_photo_description(photo.get("beschreibung", "")))
         items.append(
             '<div class="foto-description-item">'
             f'<div class="foto-description-label">Bild {index}</div>'
@@ -63,6 +66,23 @@ def _build_photo_description_cell(photos: list[dict]) -> str:
         )
 
     return f'<div class="foto-description-cell">{"".join(items)}</div>'
+
+
+def _shorten_photo_description(text: str) -> str:
+    """Kürzt Bildbeschreibungen für die PDF-Tabelle auf eine gut lesbare Fassung."""
+    clean_text = " ".join((text or "").split())
+    if not clean_text:
+        return "Ohne Beschreibung"
+
+    sentences = re.split(r'(?<=[.!?])\s+', clean_text)
+    summary = sentences[0]
+    if len(summary) < 120 and len(sentences) > 1:
+        summary = f"{summary} {sentences[1]}"
+
+    if len(summary) > 220:
+        summary = summary[:217].rstrip() + "..."
+
+    return summary
 
 
 def _format_details_cell(cell_html: str) -> str:
