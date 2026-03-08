@@ -92,10 +92,9 @@
         }
         .ki-bericht h1, .ki-bericht h2, .ki-bericht h3 {
             color: #2c3e50;
-            margin: 14px 0 6px 0;
+            margin: 0 0 10px 0;
             font-size: 11pt;
         }
-        /* Priorisierungs-Farben in Überschriften */
         .ki-bericht h1:first-child, .ki-bericht h2:first-child, .ki-bericht h3:first-child {
             margin-top: 0;
         }
@@ -117,20 +116,69 @@
         .ki-bericht strong {
             color: #2c3e50;
         }
+        .ki-bericht table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin: 0;
+        }
+        .ki-bericht th,
+        .ki-bericht td {
+            border: 1px solid #d7dee7;
+            padding: 7px 8px;
+            font-size: 9.5pt;
+            vertical-align: top;
+            word-wrap: break-word;
+        }
+        .ki-bericht th {
+            background: #edf2f7;
+            color: #1f2d3d;
+            font-weight: bold;
+            text-align: left;
+        }
+        .prio-section {
+            margin-bottom: 16px;
+            border: 1px solid #d7dee7;
+            border-radius: 8px;
+            overflow: hidden;
+            page-break-inside: avoid;
+        }
+        .prio-section h2,
+        .prio-section h3 {
+            padding: 10px 12px;
+            margin: 0;
+            font-size: 11pt;
+            border-bottom: 1px solid rgba(44, 62, 80, 0.15);
+        }
+        .prio-section table {
+            background: white;
+        }
         .prio-section-rot {
-            border-left: 4px solid #e74c3c;
-            padding-left: 10px;
-            margin-bottom: 12px;
+            background: #fff5f5;
+            border-color: #f3c3be;
+        }
+        .prio-section-rot h2,
+        .prio-section-rot h3 {
+            background: #fde2df;
+            color: #8f2d23;
         }
         .prio-section-gelb {
-            border-left: 4px solid #f1c40f;
-            padding-left: 10px;
-            margin-bottom: 12px;
+            background: #fffbea;
+            border-color: #ead68a;
+        }
+        .prio-section-gelb h2,
+        .prio-section-gelb h3 {
+            background: #fff1bf;
+            color: #7a5b00;
         }
         .prio-section-gruen {
-            border-left: 4px solid #27ae60;
-            padding-left: 10px;
-            margin-bottom: 12px;
+            background: #f2fbf5;
+            border-color: #b8ddc0;
+        }
+        .prio-section-gruen h2,
+        .prio-section-gruen h3 {
+            background: #daf2df;
+            color: #20603a;
         }
         .kategorie-badge {
             display: inline-block;

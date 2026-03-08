@@ -126,21 +126,27 @@ def beschreibe_foto(dateipfad: str) -> str:
 
 BERICHT_PROMPT = """Du bist ein professioneller Assistent für Instandhaltungsplanung. Erstelle aus den folgenden Einträgen einen strukturierten Instandhaltungsbericht.
 
-Strukturiere den Bericht in diese Abschnitte (nur wenn passende Daten vorhanden):
-1. **🔴 Sofortmaßnahmen (Priorität ROT)** – Sicherheitsrelevant, sofort handeln
-2. **🟡 Zeitnaher Handlungsbedarf (Priorität GELB)** – Bald beheben
-3. **🟢 Geplante Maßnahmen (Priorität GRÜN)** – Kann eingeplant werden
-4. **Kostenschätzung** – Übersicht der geschätzten Kosten
-5. **Empfehlungen** – Konkrete Handlungsempfehlungen und nächste Schritte
+Gib den Bericht AUSSCHLIESSLICH als Markdown aus und verwende EXAKT diese drei Prioritätsabschnitte in dieser Reihenfolge:
+## 🔴 Sofortmaßnahmen (Priorität ROT)
+## 🟡 Zeitnaher Handlungsbedarf (Priorität GELB)
+## 🟢 Geplante Maßnahmen (Priorität GRÜN)
+
+Unter jeder Überschrift muss genau eine Markdown-Tabelle mit diesen Spalten stehen:
+| Eintrag | Zustand | Problem | Maßnahme | Dringlichkeit | Kostenschätzung |
 
 Regeln:
+- Ordne jeden Eintrag genau einer Priorität zu
+- Gruppiere strikt nach Priorität in der Reihenfolge rot → gelb → grün
+- Verwende pro Eintrag eine Tabellenzeile mit "Nr. X" in der Spalte Eintrag
+- Die Spalte Kostenschätzung muss immer befüllt sein
+- Verwende EXAKT die vorhandene Kostenschätzung aus den Einträgen; erfinde keine Zahlen
+- Falls keine Kostenschätzung vorliegt, schreibe "nicht angegeben"
 - Schreibe in professionellem, sachlichem Stil
-- Gruppiere nach Priorität (rot → gelb → grün)
-- Behalte wichtige Details (Maße, Materialien, Ortsangaben)
-- Verwende EXAKT die Kostenschätzungen aus den Einträgen – erfinde keine eigenen Zahlen
-- Nutze Aufzählungspunkte (mit Spiegelstrich -)
-- Erfinde KEINE Informationen – nur was in den Einträgen steht
-- Nutze Markdown-Formatierung: **fett** für Überschriften, - für Listen
+- Behalte wichtige Details wie Maße, Materialien und Ortsangaben bei
+- Erfinde KEINE Informationen – nutze nur Inhalte aus den Einträgen
+- Der Abschnitt Empfehlungen darf NICHT vorkommen
+- Eine separate Kategorie oder Überschrift für Kostenschätzungen darf NICHT vorkommen
+- Wenn eine Prioritätsgruppe leer ist, gib in der Tabelle genau eine Zeile aus: | Keine Einträge | - | - | - | - | - |
 - Antworte auf Deutsch
 
 Einträge des Tages:
@@ -155,12 +161,11 @@ def generiere_bericht_text(eintraege: list[dict]) -> str:
         inhalt = e.get("rohinhalt", "")
         kategorie = e.get("kategorie", "")
         prio = e.get("prioritaet", "")
-        kosten = e.get("kostenschaetzung", "")
+        kosten = e.get("kostenschaetzung") or "nicht angegeben"
         foto_beschreibungen = e.get("foto_beschreibungen", [])
 
         eintraege_text += f"[Nr. {i}] ({typ}, {kategorie}, Priorität: {prio})"
-        if kosten:
-            eintraege_text += f" [Kostenschätzung: {kosten}]"
+        eintraege_text += f" [Kostenschätzung: {kosten}]"
         eintraege_text += f" {inhalt}\n"
         for fb in foto_beschreibungen:
             eintraege_text += f"  → Foto: {fb}\n"

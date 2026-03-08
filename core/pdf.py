@@ -14,7 +14,7 @@ env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 
 
 def _apply_prio_colors(html: str) -> str:
-    """Umschließt Prioritäts-Abschnitte (ROT/GELB/GRÜN) mit farbigen div-Containern."""
+    """Umschließt Prioritäts-Abschnitte (ROT/GELB/GRÜN) mit farbigen Karten."""
     # Muster: <h...>...ROT...</h...> gefolgt von Inhalt bis zum nächsten <h...> oder Ende
     # Wir splitten nach Überschriften und wrappen die passenden Sektionen
 
@@ -40,13 +40,13 @@ def _apply_prio_colors(html: str) -> str:
             part_lower = part.lower()
             if 'rot' in part_lower or '🔴' in part or 'sofortmaß' in part_lower:
                 current_prio = 'rot'
-                result.append('<div class="prio-section-rot">')
+                result.append('<div class="prio-section prio-section-rot">')
             elif 'gelb' in part_lower or '🟡' in part or 'zeitnah' in part_lower:
                 current_prio = 'gelb'
-                result.append('<div class="prio-section-gelb">')
+                result.append('<div class="prio-section prio-section-gelb">')
             elif 'grün' in part_lower or 'gruen' in part_lower or '🟢' in part or 'geplant' in part_lower:
                 current_prio = 'gruen'
-                result.append('<div class="prio-section-gruen">')
+                result.append('<div class="prio-section prio-section-gruen">')
 
             result.append(part)
         else:
