@@ -582,7 +582,14 @@ def _render_ki_bericht(doc: Document, markdown_text: str,
                         else:
                             break
                     else:
-                        break
+                        # Nicht-Pipe-Zeile: könnte Fortsetzung einer mehrzeiligen Zelle sein
+                        # (GPT bricht Zellinhalt manchmal auf mehrere Zeilen auf)
+                        if table_rows and not table_rows[-1].rstrip().endswith("|"):
+                            # Letzte gesammelte Zeile ist noch unvollständig → anhängen
+                            table_rows[-1] = table_rows[-1].rstrip() + " " + line
+                            i += 1
+                        else:
+                            break
                 _add_ki_table(doc, table_rows, current_prio, eintrag_fotos)
                 continue
 

@@ -146,6 +146,7 @@ Regeln:
 - Verwende EXAKT die Kostenschätzungen aus den Einträgen – erfinde keine eigenen Zahlen
 - Erfinde KEINE Informationen – nur was in den Einträgen steht
 - Antworte auf Deutsch
+- KRITISCH: Jede Tabellenzeile MUSS vollständig auf EINER einzigen Zeile stehen. Kein Zeilenumbruch innerhalb einer Tabellenzelle. Alle Details (Zustand, Problem, Maßnahme, Dringlichkeit, Kostenschätzung) hintereinander in einer Zeile.
 
 Nach den Tabellen: Füge einen Abschnitt **## Empfehlungen** mit konkreten nächsten Schritten als Aufzählung hinzu.
 
