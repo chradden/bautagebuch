@@ -88,10 +88,9 @@ def _build_photo_image_cell(photos: list[dict]) -> str:
         return '<span class="foto-placeholder">Kein Bild</span>'
 
     items = []
-    for index, photo in enumerate(photos, 1):
+    for photo in photos:
         items.append(
             '<div class="foto-item">'
-            f'<div class="foto-image-label">Bild {index}</div>'
             '<div class="foto-image-frame">'
             f'<img src="file://{photo["dateipfad_abs"]}" alt="Fotodokumentation">'
             '</div>'

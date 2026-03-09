@@ -302,13 +302,15 @@ def _add_bild_cell(cell, photos: list[dict]) -> None:
     first = True
     for foto in photos:
         path = foto.get("dateipfad_abs", "")
-        if not path or not os.path.exists(path):
-            continue
-
-        prepared = _prepare_image(path)
         img_para = cell.paragraphs[0] if first else cell.add_paragraph()
         first = False
         _set_para_spacing(img_para, before=0, after=20)
+
+        if not path or not os.path.exists(path):
+            img_para.add_run("[Bild nicht verfügbar]").font.size = Pt(8)
+            continue
+
+        prepared = _prepare_image(path)
         if prepared:
             buf, w_cm, h_cm = prepared
             try:
