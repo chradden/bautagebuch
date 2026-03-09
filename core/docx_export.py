@@ -238,7 +238,7 @@ def _add_bild_cell(cell, photos: list[dict]) -> None:
         # Foto in neuer Zeile
         img_para = cell.add_paragraph()
         try:
-            img_para.add_run().add_picture(path, width=Cm(4.5))
+            img_para.add_run().add_picture(path, width=Cm(6.3))
         except Exception:
             img_para.add_run("[Bild nicht verfügbar]").font.size = Pt(8)
 
@@ -710,10 +710,7 @@ def generiere_docx(
             doc.add_paragraph()
             _add_kosten_box(doc, gesamt)
 
-    # 3. Fotodokumentation
-    _add_foto_section(doc, fotos)
-
-    # 4. Footer
+    # 3. Footer
     _add_footer(doc)
 
     # Speichern
