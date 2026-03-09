@@ -113,7 +113,7 @@ def main():
 
     # 6. Tägliche Erinnerung
     if erinnerung_registrieren:
-    erinnerung_registrieren(app.job_queue)
+        erinnerung_registrieren(app.job_queue)
 
     logger.info("Bot läuft! LOCATION-Handler aktiv.")
     app.run_polling()
