@@ -300,22 +300,14 @@ def _add_bild_cell(cell, photos: list[dict]) -> None:
         return
 
     first = True
-    for idx, foto in enumerate(photos, 1):
+    for foto in photos:
         path = foto.get("dateipfad_abs", "")
         if not path or not os.path.exists(path):
             continue
 
         prepared = _prepare_image(path)
-
-        para = cell.paragraphs[0] if first else cell.add_paragraph()
+        img_para = cell.paragraphs[0] if first else cell.add_paragraph()
         first = False
-        r_label = para.add_run(f"Bild {idx}")
-        r_label.bold = True
-        r_label.font.size = Pt(8)
-        r_label.font.color.rgb = _C_DARK_RGB
-        _set_para_spacing(para, before=0, after=4)
-
-        img_para = cell.add_paragraph()
         _set_para_spacing(img_para, before=0, after=20)
         if prepared:
             buf, w_cm, h_cm = prepared
@@ -338,26 +330,19 @@ def _add_bildbeschreibung_cell(cell, photos: list[dict]) -> None:
         return
 
     first = True
-    for idx, foto in enumerate(photos, 1):
+    for foto in photos:
         desc = (foto.get("beschreibung") or "").strip()
         if not desc:
             continue
+        short = desc[:300].rstrip()
+        if len(desc) > 300:
+            short += "…"
         para = cell.paragraphs[0] if first else cell.add_paragraph()
         first = False
-        r_label = para.add_run(f"Bild {idx}")
-        r_label.bold = True
-        r_label.font.size = Pt(8)
-        r_label.font.color.rgb = _C_DARK_RGB
-        # Beschreibung auf max. 250 Zeichen kürzen
-        short = desc[:250].rstrip()
-        if len(desc) > 250:
-            short += "…"
-        desc_para = cell.add_paragraph()
-        r_desc = desc_para.add_run(short)
+        r_desc = para.add_run(short)
         r_desc.font.size = Pt(9)
         r_desc.font.color.rgb = _C_DESC_TEXT
-        if first:
-            first = False
+        _set_para_spacing(para, before=0, after=8)
 
 
 # ── KI-Tabelle als DOCX-Tabelle rendern ───────────────────────────────────
@@ -375,16 +360,31 @@ def _add_ki_table(doc: Document, raw_rows: list[str],
     # Header-Zeile parsen
     headers = [c.strip() for c in raw_rows[0].strip("|").split("|") if c.strip()]
 
-    # Alle Folgezeilen einlesen – Separator-Zeilen (|---|---|) überspringen
+    # Alle Folgezeilen einlesen – Separator-Zeilen überspringen, Pipes in Zellinhalt zusammenführen
     data_rows = []
     for row in raw_rows[1:]:
         stripped = row.strip()
         if not stripped:
             continue
-        # Separator-Zeile erkennen: enthält nur -, :, |, Leerzeichen
+        # Separator-Zeile: enthält nur -, :, |, Leerzeichen
         if re.match(r'^\|[\s:\-|]+\|$', stripped):
             continue
-        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        # Robust parsen: immer genau 4 Spalten erzeugen.
+        # KI gibt die letzten 2 Spalten (Bild, Bildbeschreibung) immer leer aus.
+        # Alles was zwischen Spalte 0 und den letzten 2 leeren Spalten liegt → Details.
+        parts = [c.strip() for c in stripped.strip("|").split("|")]
+        if len(parts) < 2:
+            continue
+        if len(parts) <= 4:
+            cells = (parts + ["", "", "", ""])[:4]
+        else:
+            # Mehr als 4 Teile: mittlere zu Details zusammenführen
+            cells = [
+                parts[0],
+                " ".join(parts[1:len(parts) - 2]),
+                parts[-2],
+                parts[-1],
+            ]
         data_rows.append(cells)
 
     if not data_rows:
@@ -563,12 +563,22 @@ def _render_ki_bericht(doc: Document, markdown_text: str,
         if stripped.startswith("|") and i + 1 < len(lines):
             next_stripped = lines[i + 1].strip()
             if re.match(r'^\|[-| :]+\|', next_stripped):
-                # Tabelle sammeln
+                # Tabelle sammeln – Leerzeilen innerhalb der Tabelle überspringen
                 table_rows = [stripped]
                 i += 1
-                while i < len(lines) and lines[i].strip().startswith("|"):
-                    table_rows.append(lines[i].strip())
-                    i += 1
+                while i < len(lines):
+                    line = lines[i].strip()
+                    if line.startswith("|"):
+                        table_rows.append(line)
+                        i += 1
+                    elif not line:
+                        # Leerzeile: weiterlesen falls danach noch eine |–Zeile kommt
+                        if i + 1 < len(lines) and lines[i + 1].strip().startswith("|"):
+                            i += 1  # Leerzeile überspringen
+                        else:
+                            break
+                    else:
+                        break
                 _add_ki_table(doc, table_rows, current_prio, eintrag_fotos)
                 continue
 

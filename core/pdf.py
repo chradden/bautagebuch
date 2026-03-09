@@ -102,21 +102,16 @@ def _build_photo_image_cell(photos: list[dict]) -> str:
 
 
 def _build_photo_description_cell(photos: list[dict]) -> str:
-    """Rendert die Bildbeschreibungen für eine Tabellenzelle."""
+    """Rendert die Bildbeschreibungen direkt als Text in der Tabellenzelle."""
     if not photos:
         return '<span class="foto-placeholder">Keine Bildbeschreibung</span>'
 
-    items = []
-    for index, photo in enumerate(photos, 1):
+    parts = []
+    for photo in photos:
         beschreibung = html.escape(_shorten_photo_description(photo.get("beschreibung", "")))
-        items.append(
-            '<div class="foto-description-item">'
-            f'<div class="foto-description-label">Bild {index}</div>'
-            f'<div class="foto-note">{beschreibung}</div>'
-            '</div>'
-        )
+        parts.append(f'<p class="foto-note">{beschreibung}</p>')
 
-    return f'<div class="foto-description-cell">{"".join(items)}</div>'
+    return "".join(parts)
 
 
 def _shorten_photo_description(text: str) -> str:
