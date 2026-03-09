@@ -7,6 +7,7 @@ from telegram.ext import ContextTypes
 from db.database import get_session
 from db.models import Benutzer, Projekt, Eintrag, Tagesbericht
 from core.pdf import generiere_pdf
+from core.docx_export import generiere_docx
 from core.ki import generiere_bericht_text
 
 
@@ -142,6 +143,21 @@ async def bericht_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Fehler bei PDF-Erstellung: {e}")
         return
 
+    # DOCX generieren
+    try:
+        docx_pfad = generiere_docx(
+            projekt_name=projekt_name,
+            bauleiter_name=bauleiter_name,
+            datum=berichtsdatum,
+            eintraege_text=eintraege_text,
+            fotos=fotos,
+            ki_bericht=ki_bericht,
+            projekt_adresse=projekt_adresse,
+        )
+    except Exception as e:
+        docx_pfad = None
+        await update.message.reply_text(f"⚠️ Word-Dokument konnte nicht erstellt werden: {e}")
+
     # PDF-Pfad in DB speichern
     with get_session() as session:
         tb = (
@@ -157,5 +173,17 @@ async def bericht_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_document(
             document=pdf_file,
             filename=os.path.basename(pdf_pfad),
-            caption=f"� Instandhaltungsbericht – {projekt_name}\n📅 {berichtsdatum.strftime('%d.%m.%Y')}",
+            caption=f"📄 Instandhaltungsbericht – {projekt_name}\n📅 {berichtsdatum.strftime('%d.%m.%Y')}",
         )
+
+    # DOCX senden
+    if docx_pfad:
+        with open(docx_pfad, "rb") as docx_file:
+            await update.message.reply_document(
+                document=docx_file,
+                filename=os.path.basename(docx_pfad),
+                caption=(
+                    f"📝 Word-Version (bearbeitbar) – {projekt_name}\n"
+                    f"📅 {berichtsdatum.strftime('%d.%m.%Y')}"
+                ),
+            )
