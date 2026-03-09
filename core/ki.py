@@ -19,7 +19,7 @@ Antworte NUR mit validem JSON (kein Markdown, kein ```):
   "kategorie": "reparatur|maengelbeseitigung|wartung|pruefung|sicherheit|sonstiges",
   "prioritaet": "rot|gelb|gruen",
   "zusammenfassung": "Kurze, professionelle Zusammenfassung in einem Satz",
-    "kostenschaetzung": "Geschätzte Kosten als Text, z.B. '500-1.000 €' oder 'unter 500 €'",
+  "kostenschaetzung": "Geschätzte Kosten als Text, z.B. '500-1.000 €' oder 'gering' wenn unklar",
   "handlungsbedarf": false
 }
 
@@ -38,8 +38,7 @@ Priorisierung:
 
 Kostenschätzung:
 - Schätze die Kosten realistisch basierend auf dem Aufwand
-- Gib IMMER eine grobe realistische Spannweite oder Größenordnung in Euro an
-- Verwende keine Platzhalter wie 'nicht einschätzbar' oder 'nicht angegeben'"""
+- Bei unklaren Angaben: 'nicht einschätzbar'"""
 
 
 def kategorisiere_eintrag(text: str) -> dict:
@@ -127,30 +126,21 @@ def beschreibe_foto(dateipfad: str) -> str:
 
 BERICHT_PROMPT = """Du bist ein professioneller Assistent für Instandhaltungsplanung. Erstelle aus den folgenden Einträgen einen strukturierten Instandhaltungsbericht.
 
-Gib den Bericht AUSSCHLIESSLICH als Markdown aus und verwende EXAKT diese drei Prioritätsabschnitte in dieser Reihenfolge:
-## 🔴 Sofortmaßnahmen (Priorität ROT)
-## 🟡 Zeitnaher Handlungsbedarf (Priorität GELB)
-## 🟢 Geplante Maßnahmen (Priorität GRÜN)
-
-Unter jeder Überschrift muss genau eine Markdown-Tabelle mit diesen Spalten stehen:
-| Eintrag | Details | Bild | Bildbeschreibung |
+Strukturiere den Bericht in diese Abschnitte (nur wenn passende Daten vorhanden):
+1. **🔴 Sofortmaßnahmen (Priorität ROT)** – Sicherheitsrelevant, sofort handeln
+2. **🟡 Zeitnaher Handlungsbedarf (Priorität GELB)** – Bald beheben
+3. **🟢 Geplante Maßnahmen (Priorität GRÜN)** – Kann eingeplant werden
+4. **Kostenschätzung** – Übersicht der geschätzten Kosten
+5. **Empfehlungen** – Konkrete Handlungsempfehlungen und nächste Schritte
 
 Regeln:
-- Ordne jeden Eintrag genau einer Priorität zu
-- Gruppiere strikt nach Priorität in der Reihenfolge rot → gelb → grün
-- Verwende pro Eintrag eine Tabellenzeile mit "Nr. X" in der Spalte Eintrag
-- Schreibe in die Spalte Details alle folgenden Punkte untereinander in genau diesem Format und genau dieser Reihenfolge: Zustand, Problem, Maßnahme, Dringlichkeit, Kostenschätzung
-- Nutze innerhalb der Details-Spalte HTML-Zeilenumbrüche mit <br>, damit die Punkte untereinander stehen
-- Wenn eine Kostenschätzung im Eintrag vorhanden ist, verwende diese als Grundlage
-- Wenn keine Kostenschätzung im Eintrag vorhanden ist, leite aus Beschreibung, Schadensbild und Aufwand eine grobe realistische Spannweite in Euro ab
-- Verwende keine Platzhalter wie 'nicht angegeben' oder 'nicht einschätzbar'
 - Schreibe in professionellem, sachlichem Stil
-- Behalte wichtige Details wie Maße, Materialien und Ortsangaben bei
-- Erfinde KEINE Informationen – nutze nur Inhalte aus den Einträgen
-- Der Abschnitt Empfehlungen darf NICHT vorkommen
-- Eine separate Kategorie oder Überschrift für Kostenschätzungen darf NICHT vorkommen
-- Schreibe in die Spalten Bild und Bildbeschreibung nur knappe Platzhalter, da diese im PDF visuell ersetzt werden
-- Wenn eine Prioritätsgruppe leer ist, gib in der Tabelle genau eine Zeile aus: | Keine Einträge | - | - | - |
+- Gruppiere nach Priorität (rot → gelb → grün)
+- Behalte wichtige Details (Maße, Materialien, Ortsangaben)
+- Verwende EXAKT die Kostenschätzungen aus den Einträgen – erfinde keine eigenen Zahlen
+- Nutze Aufzählungspunkte (mit Spiegelstrich -)
+- Erfinde KEINE Informationen – nur was in den Einträgen steht
+- Nutze Markdown-Formatierung: **fett** für Überschriften, - für Listen
 - Antworte auf Deutsch
 
 Einträge des Tages:
@@ -165,11 +155,12 @@ def generiere_bericht_text(eintraege: list[dict]) -> str:
         inhalt = e.get("rohinhalt", "")
         kategorie = e.get("kategorie", "")
         prio = e.get("prioritaet", "")
-        kosten = e.get("kostenschaetzung") or "durch KI ableiten"
+        kosten = e.get("kostenschaetzung", "")
         foto_beschreibungen = e.get("foto_beschreibungen", [])
 
         eintraege_text += f"[Nr. {i}] ({typ}, {kategorie}, Priorität: {prio})"
-        eintraege_text += f" [Kostenschätzung: {kosten}]"
+        if kosten:
+            eintraege_text += f" [Kostenschätzung: {kosten}]"
         eintraege_text += f" {inhalt}\n"
         for fb in foto_beschreibungen:
             eintraege_text += f"  → Foto: {fb}\n"

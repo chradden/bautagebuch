@@ -24,6 +24,7 @@ from bot.handlers.standort import standort_command, standort_location
 from bot.handlers.eintrag import text_eintrag, foto_eintrag, sprach_eintrag
 from bot.handlers.bericht import bericht_command
 from bot.handlers.export import export_command
+from bot.handlers.scheduler import erinnerung_registrieren
 
 # Logging
 logging.basicConfig(
@@ -102,6 +103,9 @@ def main():
 
     # 5. Error-Handler
     app.add_error_handler(error_handler)
+
+    # 6. Tägliche Erinnerung
+    erinnerung_registrieren(app.job_queue)
 
     logger.info("Bot läuft! LOCATION-Handler aktiv.")
     app.run_polling()
