@@ -299,6 +299,12 @@ async def bericht_generieren(
         eintraege_daten = []
         for e in eintraege:
             foto_beschreibungen = [f.beschreibung for f in e.fotos if f.beschreibung]
+            foto_dateien = []
+            for f in e.fotos:
+                foto_dateien.append({
+                    "dateipfad": f.dateipfad,
+                    "beschreibung": f.beschreibung or e.rohinhalt or "",
+                })
             eintraege_daten.append({
                 "typ": e.typ,
                 "uhrzeit": e.uhrzeit.strftime("%H:%M") if e.uhrzeit else "",
@@ -308,6 +314,7 @@ async def bericht_generieren(
                 "prioritaet": e.prioritaet or "gelb",
                 "kostenschaetzung": e.kostenschaetzung or "",
                 "foto_beschreibungen": foto_beschreibungen,
+                "foto_dateien": foto_dateien,
             })
 
         foto_daten = []
@@ -344,6 +351,7 @@ async def bericht_generieren(
             self.ki_zusammenfassung = d["ki_zusammenfassung"]
             self.prioritaet = d.get("prioritaet", "gelb")
             self.kostenschaetzung = d.get("kostenschaetzung", "")
+            self.fotos = d.get("foto_dateien", [])
             self.uhrzeit_str = d["uhrzeit"]
 
     class FotoView:
