@@ -11,15 +11,21 @@ from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
 import config
-from core.pdf import _build_total_cost_estimate
+from core.pdf import _build_total_cost_estimate, _build_eintrag_foto_map
 
-# ── Farben – deckungsgleich mit tagesbericht.html ─────────────────────────
+# ── Farben identisch zu tagesbericht.html ─────────────────────────────────
 
-_C_DARK       = "2C3E50"
-_C_DARK_RGB   = RGBColor(0x2C, 0x3E, 0x50)
-_C_WHITE      = RGBColor(0xFF, 0xFF, 0xFF)
-_C_BODY       = RGBColor(0x33, 0x33, 0x33)
-_C_META       = RGBColor(0x66, 0x66, 0x66)
+_C_DARK      = "2C3E50"
+_C_DARK_RGB  = RGBColor(0x2C, 0x3E, 0x50)
+_C_WHITE     = RGBColor(0xFF, 0xFF, 0xFF)
+_C_BODY      = RGBColor(0x33, 0x33, 0x33)
+_C_META      = RGBColor(0x66, 0x66, 0x66)
+_C_TH_BG     = "EDF2F7"          # Tabellen-Header-Hintergrund
+_C_TH_TEXT   = RGBColor(0x1F, 0x2D, 0x3D)
+_C_TD_BORDER = "D7DEE7"          # Zellenrahmen
+_C_FOTO_BG   = "FCFDFF"          # Bild-/Bildbeschreibungs-Spalte
+_C_GREY_TEXT = RGBColor(0x7B, 0x87, 0x94)
+_C_DESC_TEXT = RGBColor(0x43, 0x53, 0x64)
 
 _PRIO = {
     "rot": {
@@ -42,6 +48,12 @@ _PRIO = {
     },
 }
 
+# Spaltenbreiten (A4 Quer, ~27,3 cm nutzbar) = 8% / 32% / 26% / 34%
+_COL_WIDTHS = [Cm(2.2), Cm(8.7), Cm(7.1), Cm(9.3)]
+
+# Labels wie im PDF Detail-Block
+_DETAIL_LABELS = ["Zustand", "Problem", "Maßnahme", "Dringlichkeit", "Kostenschätzung"]
+
 # ── XML-Hilfsfunktionen ────────────────────────────────────────────────────
 
 def _set_cell_bg(cell, hex_color: str) -> None:
@@ -51,6 +63,20 @@ def _set_cell_bg(cell, hex_color: str) -> None:
     shd.set(qn("w:color"), "auto")
     shd.set(qn("w:fill"), hex_color)
     tcPr.append(shd)
+
+
+def _set_cell_borders(cell, color: str = _C_TD_BORDER, size: int = 6) -> None:
+    """Setzt Rahmenlinien um eine Tabellenzelle."""
+    tcPr = cell._tc.get_or_add_tcPr()
+    tcBorders = OxmlElement("w:tcBorders")
+    for side in ("top", "left", "bottom", "right"):
+        bd = OxmlElement(f"w:{side}")
+        bd.set(qn("w:val"), "single")
+        bd.set(qn("w:sz"), str(size))
+        bd.set(qn("w:space"), "0")
+        bd.set(qn("w:color"), color)
+        tcBorders.append(bd)
+    tcPr.append(tcBorders)
 
 
 def _remove_cell_borders(cell) -> None:
@@ -121,6 +147,7 @@ def _set_para_spacing(para, before: int = 0, after: int = 0) -> None:
 
 def _add_inline_markup(para, text: str, size: float = 10,
                         color: RGBColor | None = None) -> None:
+    """Rendert **fett** und *kursiv* Markdown-Markup in einen Paragraphen."""
     for part in re.split(r'(\*\*[^*]+\*\*|\*[^*]+\*)', text):
         if part.startswith("**") and part.endswith("**"):
             run = para.add_run(part[2:-2])
@@ -135,7 +162,218 @@ def _add_inline_markup(para, text: str, size: float = 10,
             run.font.color.rgb = color
 
 
-# ── Header-Block (wie .header im CSS) ─────────────────────────────────────
+# ── Tabellenzellen-Renderer ───────────────────────────────────────────────
+
+def _add_detail_cell_content(para, text: str) -> None:
+    """
+    Rendert den Details-Block mit fett markierten Labels,
+    analog zu den .detail-label Pills im PDF.
+    """
+    # Markdown-Markup entfernen
+    clean = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+    clean = re.sub(r'\*([^*]+)\*', r'\1', clean)
+
+    # Versuche, "Label: Wert"-Paare zu erkennen
+    label_pattern = '|'.join(re.escape(l) for l in _DETAIL_LABELS)
+    parts = re.split(rf'({label_pattern})\s*:?\s*', clean)
+
+    if len(parts) <= 1:
+        # Kein erkennbares Label-Muster – einfach ausgeben
+        run = para.add_run(clean)
+        run.font.size = Pt(9)
+        return
+
+    # Paare zusammensetzen und formatieren
+    i = 0
+    while i < len(parts):
+        part = parts[i].strip()
+        if not part:
+            i += 1
+            continue
+        if part in _DETAIL_LABELS:
+            # Label fett
+            r_label = para.add_run(part)
+            r_label.bold = True
+            r_label.font.size = Pt(9)
+            r_label.font.color.rgb = _C_TH_TEXT
+            # Wert im nächsten Segment
+            if i + 1 < len(parts):
+                value = parts[i + 1].strip().rstrip(" ,;")
+                r_sep = para.add_run(": ")
+                r_sep.font.size = Pt(9)
+                r_val = para.add_run(value)
+                r_val.font.size = Pt(9)
+                # Zeilenumbruch nach Wert
+                para.add_run("  ")
+                i += 2
+                continue
+        else:
+            run = para.add_run(part + " ")
+            run.font.size = Pt(9)
+        i += 1
+
+
+def _add_bild_cell(cell, photos: list[dict]) -> None:
+    """Fügt Fotos in eine DOCX-Tabellenzelle ein (wie Bild-Spalte im PDF)."""
+    _set_cell_bg(cell, _C_FOTO_BG)
+    if not photos:
+        r = cell.paragraphs[0].add_run("Kein Bild")
+        r.font.size = Pt(9)
+        r.font.italic = True
+        r.font.color.rgb = _C_GREY_TEXT
+        return
+
+    first = True
+    for idx, foto in enumerate(photos, 1):
+        path = foto.get("dateipfad_abs", "")
+        if not path or not os.path.exists(path):
+            continue
+        para = cell.paragraphs[0] if first else cell.add_paragraph()
+        first = False
+        # Label "Bild 1", "Bild 2" etc.
+        r_label = para.add_run(f"Bild {idx}  ")
+        r_label.bold = True
+        r_label.font.size = Pt(8)
+        r_label.font.color.rgb = _C_DARK_RGB
+        # Foto in neuer Zeile
+        img_para = cell.add_paragraph()
+        try:
+            img_para.add_run().add_picture(path, width=Cm(4.5))
+        except Exception:
+            img_para.add_run("[Bild nicht verfügbar]").font.size = Pt(8)
+
+
+def _add_bildbeschreibung_cell(cell, photos: list[dict]) -> None:
+    """Fügt Bildbeschreibungen in eine DOCX-Tabellenzelle ein."""
+    _set_cell_bg(cell, _C_FOTO_BG)
+    if not photos:
+        r = cell.paragraphs[0].add_run("Keine Bildbeschreibung")
+        r.font.size = Pt(9)
+        r.font.italic = True
+        r.font.color.rgb = _C_GREY_TEXT
+        return
+
+    first = True
+    for idx, foto in enumerate(photos, 1):
+        desc = (foto.get("beschreibung") or "").strip()
+        if not desc:
+            continue
+        para = cell.paragraphs[0] if first else cell.add_paragraph()
+        first = False
+        r_label = para.add_run(f"Bild {idx}")
+        r_label.bold = True
+        r_label.font.size = Pt(8)
+        r_label.font.color.rgb = _C_DARK_RGB
+        # Beschreibung auf max. 250 Zeichen kürzen
+        short = desc[:250].rstrip()
+        if len(desc) > 250:
+            short += "…"
+        desc_para = cell.add_paragraph()
+        r_desc = desc_para.add_run(short)
+        r_desc.font.size = Pt(9)
+        r_desc.font.color.rgb = _C_DESC_TEXT
+        if first:
+            first = False
+
+
+# ── KI-Tabelle als DOCX-Tabelle rendern ───────────────────────────────────
+
+def _add_ki_table(doc: Document, raw_rows: list[str],
+                   current_prio: str | None,
+                   eintrag_fotos: dict) -> None:
+    """
+    Wandelt eine Markdown-Tabelle in eine DOCX-Tabelle um –
+    identische Spaltenstruktur wie im PDF (Eintrag/Details/Bild/Bildbeschreibung).
+    """
+    if len(raw_rows) < 2:
+        return
+
+    # Header-Zeile parsen
+    headers = [c.strip() for c in raw_rows[0].strip("|").split("|") if c.strip()]
+    # Separator-Zeile (raw_rows[1]) überspringen
+    data_rows = []
+    for row in raw_rows[2:]:
+        cells = [c.strip() for c in row.strip("|").split("|")]
+        if cells:
+            data_rows.append(cells)
+
+    if not data_rows:
+        return
+
+    # Immer 4 Spalten: Eintrag | Details | Bild | Bildbeschreibung
+    n_cols = 4
+    display_headers = (list(headers) + ["", "", "", ""])[:n_cols]
+    display_headers[2] = "Bild"
+    display_headers[3] = "Bildbeschreibung"
+
+    colors = _PRIO.get(current_prio) if current_prio else None
+
+    tbl = doc.add_table(rows=0, cols=n_cols)
+    # Rahmenstil setzen
+    tbl.style = "Table Grid"
+
+    # ── Header-Zeile ──────────────────────────────────────────────────
+    hdr_row = tbl.add_row()
+    for idx, h in enumerate(display_headers):
+        cell = hdr_row.cells[idx]
+        bg = colors["bg_heading"] if colors else _C_TH_BG
+        _set_cell_bg(cell, bg)
+        _set_cell_borders(cell)
+        para = cell.paragraphs[0]
+        run = para.add_run(h)
+        run.bold = True
+        run.font.size = Pt(9.5)
+        run.font.color.rgb = colors["text"] if colors else _C_TH_TEXT
+        para.paragraph_format.left_indent = Cm(0.15)
+        _set_para_spacing(para, before=30, after=30)
+
+    # ── Daten-Zeilen ──────────────────────────────────────────────────
+    for row_cells in data_rows:
+        entry_text = row_cells[0] if row_cells else ""
+        nr_match = re.search(r'Nr\.\s*(\d+)', entry_text)
+        photos = []
+        if nr_match and eintrag_fotos:
+            photos = eintrag_fotos.get(int(nr_match.group(1)), [])
+
+        row = tbl.add_row()
+
+        for idx in range(n_cols):
+            cell = row.cells[idx]
+            _set_cell_borders(cell)
+            if colors:
+                _set_cell_bg(cell, colors["bg_content"])
+            para = cell.paragraphs[0]
+            para.paragraph_format.left_indent = Cm(0.15)
+            _set_para_spacing(para, before=30, after=30)
+
+            src = row_cells[idx] if idx < len(row_cells) else ""
+
+            if idx == 0:
+                # Eintrag-Spalte
+                run = para.add_run(src)
+                run.font.size = Pt(9.5)
+                run.bold = True
+            elif idx == 1:
+                # Details-Spalte mit Label-Formatierung
+                _add_detail_cell_content(para, src)
+            elif idx == 2:
+                # Bild-Spalte – echte Fotos
+                _add_bild_cell(cell, photos)
+            elif idx == 3:
+                # Bildbeschreibung
+                _add_bildbeschreibung_cell(cell, photos)
+
+    # ── Spaltenbreiten ────────────────────────────────────────────────
+    for row in tbl.rows:
+        for idx, width in enumerate(_COL_WIDTHS):
+            row.cells[idx].width = width
+
+    # Abstand nach Tabelle
+    gap = doc.add_paragraph()
+    _set_para_spacing(gap, before=0, after=60)
+
+
+# ── Header-Block ──────────────────────────────────────────────────────────
 
 def _add_report_header(doc: Document, projekt_name: str, projekt_adresse: str,
                         datum: date, bauleiter_name: str) -> None:
@@ -171,7 +409,7 @@ def _add_report_header(doc: Document, projekt_name: str, projekt_adresse: str,
     _set_para_spacing(sep, before=60, after=120)
 
 
-# ── Abschnitts-Header (wie .section h2 im CSS) ────────────────────────────
+# ── Abschnitts-Header (weißer Text auf dunkelblauem Hintergrund) ──────────
 
 def _add_section_header(doc: Document, text: str) -> None:
     tbl = doc.add_table(rows=1, cols=1)
@@ -205,18 +443,44 @@ def _detect_prio(text: str) -> str | None:
 
 # ── KI-Bericht Renderer ───────────────────────────────────────────────────
 
-def _render_ki_bericht(doc: Document, markdown_text: str) -> None:
+def _render_ki_bericht(doc: Document, markdown_text: str,
+                        eintrag_fotos: dict | None = None) -> None:
+    """
+    Wandelt den KI-Markdown-Bericht in DOCX um.
+    Markdown-Tabellen werden als echte DOCX-Tabellen mit Foto-Injektion gerendert.
+    Prio-Abschnitte erhalten farbige Hintergründe wie im PDF.
+    """
+    if eintrag_fotos is None:
+        eintrag_fotos = {}
+
     current_prio: str | None = None
+    lines = markdown_text.splitlines()
+    i = 0
 
-    for line in markdown_text.splitlines():
-        stripped = line.strip()
+    while i < len(lines):
+        stripped = lines[i].strip()
 
+        # ── Leerzeile ──────────────────────────────────────────────
         if not stripped:
             gap = doc.add_paragraph()
             _set_para_spacing(gap, before=0, after=40)
+            i += 1
             continue
 
-        # H1
+        # ── Markdown-Tabelle erkennen (aktuelle + nächste Zeile ---|---|) ──
+        if stripped.startswith("|") and i + 1 < len(lines):
+            next_stripped = lines[i + 1].strip()
+            if re.match(r'^\|[-| :]+\|', next_stripped):
+                # Tabelle sammeln
+                table_rows = [stripped]
+                i += 1
+                while i < len(lines) and lines[i].strip().startswith("|"):
+                    table_rows.append(lines[i].strip())
+                    i += 1
+                _add_ki_table(doc, table_rows, current_prio, eintrag_fotos)
+                continue
+
+        # ── H1 ─────────────────────────────────────────────────────
         m = re.match(r'^# (.*)', stripped)
         if m:
             current_prio = _detect_prio(m.group(1)) or current_prio
@@ -226,9 +490,10 @@ def _render_ki_bericht(doc: Document, markdown_text: str) -> None:
             run.font.size = Pt(13)
             run.font.color.rgb = _C_DARK_RGB
             _set_para_spacing(para, before=120, after=60)
+            i += 1
             continue
 
-        # H2
+        # ── H2 ─────────────────────────────────────────────────────
         m = re.match(r'^## (.*)', stripped)
         if m:
             text = m.group(1)
@@ -243,9 +508,10 @@ def _render_ki_bericht(doc: Document, markdown_text: str) -> None:
             run.font.color.rgb = colors["text"] if colors else _C_DARK_RGB
             para.paragraph_format.left_indent = Cm(0.3)
             _set_para_spacing(para, before=120, after=30)
+            i += 1
             continue
 
-        # H3
+        # ── H3 ─────────────────────────────────────────────────────
         m = re.match(r'^### (.*)', stripped)
         if m:
             text = m.group(1)
@@ -262,9 +528,10 @@ def _render_ki_bericht(doc: Document, markdown_text: str) -> None:
             run.font.color.rgb = colors["text"] if colors else _C_DARK_RGB
             para.paragraph_format.left_indent = Cm(0.3)
             _set_para_spacing(para, before=80, after=20)
+            i += 1
             continue
 
-        # Aufzählungspunkt
+        # ── Aufzählungspunkt ────────────────────────────────────────
         m = re.match(r'^[-*] (.*)', stripped)
         if m:
             colors = _PRIO.get(current_prio) if current_prio else None
@@ -280,25 +547,10 @@ def _render_ki_bericht(doc: Document, markdown_text: str) -> None:
                 bullet_run.font.color.rgb = colors["text"]
             _add_inline_markup(para, m.group(1), size=10)
             _set_para_spacing(para, before=20, after=20)
+            i += 1
             continue
 
-        # Markdown-Tabellen-Zeile
-        if stripped.startswith("|"):
-            cells = [c.strip() for c in stripped.strip("|").split("|")]
-            if all(re.match(r'^[-: ]+$', c) for c in cells if c):
-                continue
-            colors = _PRIO.get(current_prio) if current_prio else None
-            para = doc.add_paragraph()
-            if colors:
-                _set_para_shading(para, colors["bg_content"])
-                _set_para_left_border(para, colors["border"])
-                para.paragraph_format.left_indent = Cm(0.3)
-            text = "   |   ".join(c for c in cells if c)
-            _add_inline_markup(para, text, size=9.5)
-            _set_para_spacing(para, before=20, after=20)
-            continue
-
-        # Normaler Absatz
+        # ── Normaler Absatz ─────────────────────────────────────────
         colors = _PRIO.get(current_prio) if current_prio else None
         para = doc.add_paragraph()
         if colors:
@@ -307,9 +559,10 @@ def _render_ki_bericht(doc: Document, markdown_text: str) -> None:
             para.paragraph_format.left_indent = Cm(0.3)
         _add_inline_markup(para, stripped, size=10)
         _set_para_spacing(para, before=20, after=20)
+        i += 1
 
 
-# ── Gesamtkosten-Box (wie .kosten-summary im CSS) ─────────────────────────
+# ── Gesamtkosten-Box ──────────────────────────────────────────────────────
 
 def _add_kosten_box(doc: Document, gesamt: str) -> None:
     tbl = doc.add_table(rows=1, cols=1)
@@ -362,8 +615,9 @@ def _add_foto_section(doc: Document, fotos: list) -> None:
 
         cell = row_cells[col]
         try:
-            img_run = cell.paragraphs[0].add_run()
-            img_run.add_picture(os.path.abspath(foto.dateipfad), width=Cm(8.5))
+            cell.paragraphs[0].add_run().add_picture(
+                os.path.abspath(foto.dateipfad), width=Cm(8.5)
+            )
         except Exception:
             cell.paragraphs[0].add_run("[Bild nicht verfügbar]")
 
@@ -374,9 +628,9 @@ def _add_foto_section(doc: Document, fotos: list) -> None:
                 parts.append(uhrzeit.strftime("%H:%M"))
             except AttributeError:
                 parts.append(str(uhrzeit))
-        beschreibung = getattr(foto, "beschreibung", "") or ""
+        beschreibung = (getattr(foto, "beschreibung", "") or "")
         if beschreibung:
-            parts.append(beschreibung)
+            parts.append(beschreibung[:120])
         if parts:
             cap = cell.add_paragraph(" – ".join(parts))
             if cap.runs:
@@ -385,7 +639,7 @@ def _add_foto_section(doc: Document, fotos: list) -> None:
                 cap.runs[0].font.color.rgb = _C_META
 
 
-# ── Footer (wie .footer im CSS) ───────────────────────────────────────────
+# ── Footer ────────────────────────────────────────────────────────────────
 
 def _add_footer(doc: Document) -> None:
     sep = doc.add_paragraph()
@@ -422,13 +676,12 @@ def generiere_docx(
 ) -> str:
     """
     Generiert einen editierbaren Word-Tagesbericht (.docx) im PDF-Layout.
-
-    Returns:
-        Pfad zur generierten DOCX-Datei.
+    Markdown-Tabellen des KI-Berichts werden als DOCX-Tabellen mit echten
+    Fotos gerendert – identisch zur PDF-Darstellung.
     """
     doc = Document()
 
-    # A4 Querformat + Ränder 1.2 cm (wie PDF: size: A4 landscape; margin: 1.2cm)
+    # A4 Querformat + Ränder 1.2 cm (identisch zum PDF)
     for section in doc.sections:
         section.page_width    = Cm(29.7)
         section.page_height   = Cm(21.0)
@@ -437,28 +690,30 @@ def generiere_docx(
         section.left_margin   = Cm(1.2)
         section.right_margin  = Cm(1.2)
 
-    # Standardschrift Arial (wie PDF body)
     doc.styles["Normal"].font.name = "Arial"
     doc.styles["Normal"].font.size = Pt(11)
     doc.styles["Normal"].font.color.rgb = _C_BODY
 
-    # 1. Header ────────────────────────────────────────────────────────────
+    # Foto-Map aufbauen (Eintragsnummer → Fotos)
+    eintrag_fotos = _build_eintrag_foto_map(eintraege_text)
+
+    # 1. Header
     _add_report_header(doc, projekt_name, projekt_adresse, datum, bauleiter_name)
 
-    # 2. KI-Analyse ────────────────────────────────────────────────────────
+    # 2. KI-Analyse mit Tabellen und Fotos
     if ki_bericht:
         _add_section_header(doc, "KI-Analyse & Priorisierung")
-        _render_ki_bericht(doc, ki_bericht)
+        _render_ki_bericht(doc, ki_bericht, eintrag_fotos)
 
         gesamt = _build_total_cost_estimate(eintraege_text)
         if gesamt:
             doc.add_paragraph()
             _add_kosten_box(doc, gesamt)
 
-    # 3. Fotodokumentation ─────────────────────────────────────────────────
+    # 3. Fotodokumentation
     _add_foto_section(doc, fotos)
 
-    # 4. Footer ────────────────────────────────────────────────────────────
+    # 4. Footer
     _add_footer(doc)
 
     # Speichern
