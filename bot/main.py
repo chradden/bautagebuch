@@ -112,7 +112,7 @@ def main():
     app.add_error_handler(error_handler)
 
     # 6. Tägliche Erinnerung
-if erinnerung_registrieren:    
+if erinnerung_registrieren:
     erinnerung_registrieren(app.job_queue)
 
     logger.info("Bot läuft! LOCATION-Handler aktiv.")
