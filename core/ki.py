@@ -173,16 +173,20 @@ def generiere_bericht_text(eintraege: list[dict]) -> str:
             eintraege_text += f"  → Foto: {fb}\n"
 
     try:
+        n = len(eintraege)
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {
                     "role": "system",
-                    "content": BERICHT_PROMPT.format(eintraege=eintraege_text),
+                    "content": BERICHT_PROMPT.format(
+                        eintraege=eintraege_text,
+                        anzahl=n,
+                    ),
                 },
             ],
             temperature=0.2,
-            max_tokens=1500,
+            max_tokens=3000,
         )
         return response.choices[0].message.content
     except Exception as e:

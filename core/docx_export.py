@@ -351,13 +351,15 @@ def _add_bildbeschreibung_cell(cell, photos: list[dict]) -> None:
 
 def _add_ki_table(doc: Document, raw_rows: list[str],
                    current_prio: str | None,
-                   eintrag_fotos: dict) -> None:
+                   eintrag_fotos: dict) -> set[int]:
     """
     Wandelt eine Markdown-Tabelle in eine DOCX-Tabelle um –
     identische Spaltenstruktur wie im PDF (Eintrag/Details/Bild/Bildbeschreibung).
+    Gibt die Menge der gerenderten Nr.-Einträge zurück.
     """
+    rendered: set[int] = set()
     if len(raw_rows) < 2:
-        return
+        return rendered
 
     # Header-Zeile parsen
     headers = [c.strip() for c in raw_rows[0].strip("|").split("|") if c.strip()]
@@ -425,7 +427,9 @@ def _add_ki_table(doc: Document, raw_rows: list[str],
         nr_match = re.search(r'Nr\.?\s*(\d+)', entry_text)
         photos = []
         if nr_match and eintrag_fotos:
-            photos = eintrag_fotos.get(int(nr_match.group(1)), [])
+            nr_int = int(nr_match.group(1))
+            rendered.add(nr_int)
+            photos = eintrag_fotos.get(nr_int, [])
 
         row = tbl.add_row()
         # Zeile darf nicht über zwei Seiten gehen
@@ -465,6 +469,8 @@ def _add_ki_table(doc: Document, raw_rows: list[str],
     # Abstand nach Tabelle
     gap = doc.add_paragraph()
     _set_para_spacing(gap, before=0, after=60)
+
+    return rendered
 
 
 # ── Header-Block ──────────────────────────────────────────────────────────
@@ -538,15 +544,20 @@ def _detect_prio(text: str) -> str | None:
 # ── KI-Bericht Renderer ───────────────────────────────────────────────────
 
 def _render_ki_bericht(doc: Document, markdown_text: str,
-                        eintrag_fotos: dict | None = None) -> None:
+                        eintrag_fotos: dict | None = None,
+                        eintraege_text: list | None = None) -> None:
     """
     Wandelt den KI-Markdown-Bericht in DOCX um.
     Markdown-Tabellen werden als echte DOCX-Tabellen mit Foto-Injektion gerendert.
     Prio-Abschnitte erhalten farbige Hintergründe wie im PDF.
+    Fehlende Einträge werden am Ende automatisch ergänzt.
     """
     if eintrag_fotos is None:
         eintrag_fotos = {}
+    if eintraege_text is None:
+        eintraege_text = []
 
+    rendered_nrs: set[int] = set()
     current_prio: str | None = None
     lines = markdown_text.splitlines()
     i = 0
@@ -592,7 +603,7 @@ def _render_ki_bericht(doc: Document, markdown_text: str,
                             i += 1
                         else:
                             break
-                _add_ki_table(doc, table_rows, current_prio, eintrag_fotos)
+                rendered_nrs |= _add_ki_table(doc, table_rows, current_prio, eintrag_fotos)
                 continue
 
         # ── H1 ─────────────────────────────────────────────────────
@@ -676,8 +687,26 @@ def _render_ki_bericht(doc: Document, markdown_text: str,
         _set_para_spacing(para, before=20, after=20)
         i += 1
 
-
-# ── Gesamtkosten-Box ──────────────────────────────────────────────────────
+    # ── Fehlende Einträge auffangen ───────────────────────────────────
+    if eintrag_fotos:
+        all_nrs = set(eintrag_fotos.keys())
+        missing = sorted(all_nrs - rendered_nrs)
+        if missing:
+            # Synthetische Markdown-Zeilen für fehlende Einträge erzeugen
+            synthetic_rows = [
+                "| Eintrag | Details | Bild | Bildbeschreibung |",
+                "|---------|---------|------|-----------------|",
+            ]
+            for nr in missing:
+                idx = nr - 1
+                detail = ""
+                if idx < len(eintraege_text):
+                    e = eintraege_text[idx]
+                    detail = (getattr(e, 'ki_zusammenfassung', '')
+                              or getattr(e, 'rohinhalt', '') or '')
+                    detail = detail.replace("|", "/").replace("\n", " ")
+                synthetic_rows.append(f"| Nr. {nr} | {detail} | | |")
+            rendered_nrs |= _add_ki_table(doc, synthetic_rows, None, eintrag_fotos)
 
 def _add_kosten_box(doc: Document, gesamt: str) -> None:
     tbl = doc.add_table(rows=1, cols=1)
@@ -818,7 +847,7 @@ def generiere_docx(
     # 2. KI-Analyse mit Tabellen und Fotos
     if ki_bericht:
         _add_section_header(doc, "KI-Analyse & Priorisierung")
-        _render_ki_bericht(doc, ki_bericht, eintrag_fotos)
+        _render_ki_bericht(doc, ki_bericht, eintrag_fotos, eintraege_text)
 
         gesamt = _build_total_cost_estimate(eintraege_text)
         if gesamt:

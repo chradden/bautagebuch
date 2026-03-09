@@ -215,6 +215,59 @@ def _inject_entry_photos(html_content: str, eintrag_fotos: dict[int, list[dict]]
     return html_content
 
 
+def _add_missing_entries_html(
+    html_content: str,
+    eintrag_fotos: dict[int, list[dict]],
+    eintraege_text: list,
+) -> str:
+    """Fügt fehlende Einträge (die die KI ausgelassen hat) als HTML-Tabelle hinzu."""
+    if not eintrag_fotos:
+        return html_content
+
+    found_nrs = set(
+        int(m.group(1)) for m in re.finditer(r'Nr\.?\s*(\d+)', html_content)
+    )
+    all_nrs = set(eintrag_fotos.keys())
+    missing = sorted(all_nrs - found_nrs)
+    if not missing:
+        return html_content
+
+    rows_html = []
+    for nr in missing:
+        photos = eintrag_fotos.get(nr, [])
+        idx = nr - 1
+        detail = ""
+        if idx < len(eintraege_text):
+            e = eintraege_text[idx]
+            raw = getattr(e, 'ki_zusammenfassung', '') or getattr(e, 'rohinhalt', '') or ''
+            detail = html.escape(raw)
+        image_html = _build_photo_image_cell(photos)
+        desc_html = _build_photo_description_cell(photos)
+        rows_html.append(
+            f'<tr>'
+            f'<td class="entry-col">Nr. {nr}</td>'
+            f'<td class="details-col">{detail}</td>'
+            f'<td class="image-col">{image_html}</td>'
+            f'<td class="image-description-col">{desc_html}</td>'
+            f'</tr>'
+        )
+
+    table_html = (
+        '<table>'
+        '<thead><tr>'
+        '<th class="entry-col">Eintrag</th>'
+        '<th class="details-col">Details</th>'
+        '<th class="image-col">Bild</th>'
+        '<th class="image-description-col">Bildbeschreibung</th>'
+        '</tr></thead>'
+        '<tbody>' + ''.join(rows_html) + '</tbody>'
+        '</table>'
+    )
+
+    html_content += table_html
+    return html_content
+
+
 def _apply_prio_colors(html_content: str) -> str:
     """Umschließt Prioritäts-Abschnitte (ROT/GELB/GRÜN) mit farbigen Karten."""
     # Muster: <h...>...ROT...</h...> gefolgt von Inhalt bis zum nächsten <h...> oder Ende
@@ -297,6 +350,9 @@ def generiere_pdf(
             extensions=["tables", "sane_lists"],
         )
         ki_bericht_html = _inject_entry_photos(ki_bericht_html, eintrag_fotos)
+        ki_bericht_html = _add_missing_entries_html(
+            ki_bericht_html, eintrag_fotos, eintraege_text
+        )
         ki_bericht_html = _apply_prio_colors(ki_bericht_html)
 
     html_content = template.render(
