@@ -143,6 +143,14 @@ def _set_para_spacing(para, before: int = 0, after: int = 0) -> None:
     pPr.append(spacing)
 
 
+def _set_row_cant_split(row) -> None:
+    """Verhindert das Aufteilen einer Tabellenzeile über zwei Seiten."""
+    trPr = row._tr.get_or_add_trPr()
+    cantSplit = OxmlElement("w:cantSplit")
+    cantSplit.set(qn("w:val"), "1")
+    trPr.append(cantSplit)
+
+
 # ── Inline-Markup ─────────────────────────────────────────────────────────
 
 def _add_inline_markup(para, text: str, size: float = 10,
@@ -164,51 +172,62 @@ def _add_inline_markup(para, text: str, size: float = 10,
 
 # ── Tabellenzellen-Renderer ───────────────────────────────────────────────
 
-def _add_detail_cell_content(para, text: str) -> None:
+def _add_detail_cell_content(cell, text: str) -> None:
     """
-    Rendert den Details-Block mit fett markierten Labels,
+    Rendert den Details-Block: jedes Label-Wert-Paar in einem eigenen Absatz,
     analog zu den .detail-label Pills im PDF.
     """
     # Markdown-Markup entfernen
     clean = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
     clean = re.sub(r'\*([^*]+)\*', r'\1', clean)
 
-    # Versuche, "Label: Wert"-Paare zu erkennen
     label_pattern = '|'.join(re.escape(l) for l in _DETAIL_LABELS)
     parts = re.split(rf'({label_pattern})\s*:?\s*', clean)
 
     if len(parts) <= 1:
-        # Kein erkennbares Label-Muster – einfach ausgeben
-        run = para.add_run(clean)
+        para = cell.paragraphs[0]
+        run = para.add_run(clean.strip())
         run.font.size = Pt(9)
+        _set_para_spacing(para, before=0, after=20)
         return
 
-    # Paare zusammensetzen und formatieren
+    first_para_used = False
     i = 0
     while i < len(parts):
         part = parts[i].strip()
         if not part:
             i += 1
             continue
+
         if part in _DETAIL_LABELS:
-            # Label fett
+            # Jedes Label bekommt einen eigenen Absatz in der Zelle
+            para = cell.paragraphs[0] if not first_para_used else cell.add_paragraph()
+            first_para_used = True
+            _set_para_spacing(para, before=0, after=10)
+            para.paragraph_format.left_indent = Cm(0.15)
+
             r_label = para.add_run(part)
             r_label.bold = True
-            r_label.font.size = Pt(9)
+            r_label.font.size = Pt(8.5)
             r_label.font.color.rgb = _C_TH_TEXT
-            # Wert im nächsten Segment
+
             if i + 1 < len(parts):
                 value = parts[i + 1].strip().rstrip(" ,;")
                 r_sep = para.add_run(": ")
                 r_sep.font.size = Pt(9)
+                r_sep.font.color.rgb = _C_BODY
                 r_val = para.add_run(value)
                 r_val.font.size = Pt(9)
-                # Zeilenumbruch nach Wert
-                para.add_run("  ")
+                r_val.font.color.rgb = _C_BODY
                 i += 2
                 continue
         else:
-            run = para.add_run(part + " ")
+            # Freitext vor erstem Label
+            para = cell.paragraphs[0] if not first_para_used else cell.add_paragraph()
+            first_para_used = True
+            _set_para_spacing(para, before=0, after=10)
+            para.paragraph_format.left_indent = Cm(0.15)
+            run = para.add_run(part)
             run.font.size = Pt(9)
         i += 1
 
@@ -231,14 +250,16 @@ def _add_bild_cell(cell, photos: list[dict]) -> None:
         para = cell.paragraphs[0] if first else cell.add_paragraph()
         first = False
         # Label "Bild 1", "Bild 2" etc.
-        r_label = para.add_run(f"Bild {idx}  ")
+        r_label = para.add_run(f"Bild {idx}")
         r_label.bold = True
         r_label.font.size = Pt(8)
         r_label.font.color.rgb = _C_DARK_RGB
-        # Foto in neuer Zeile
+        _set_para_spacing(para, before=0, after=4)
+        # Foto in neuer Zeile – einheitliche Breite 5 cm
         img_para = cell.add_paragraph()
+        _set_para_spacing(img_para, before=0, after=20)
         try:
-            img_para.add_run().add_picture(path, width=Cm(6.3))
+            img_para.add_run().add_picture(path, width=Cm(5.0))
         except Exception:
             img_para.add_run("[Bild nicht verfügbar]").font.size = Pt(8)
 
@@ -290,12 +311,18 @@ def _add_ki_table(doc: Document, raw_rows: list[str],
 
     # Header-Zeile parsen
     headers = [c.strip() for c in raw_rows[0].strip("|").split("|") if c.strip()]
-    # Separator-Zeile (raw_rows[1]) überspringen
+
+    # Alle Folgezeilen einlesen – Separator-Zeilen (|---|---|) überspringen
     data_rows = []
-    for row in raw_rows[2:]:
-        cells = [c.strip() for c in row.strip("|").split("|")]
-        if cells:
-            data_rows.append(cells)
+    for row in raw_rows[1:]:
+        stripped = row.strip()
+        if not stripped:
+            continue
+        # Separator-Zeile erkennen: enthält nur -, :, |, Leerzeichen
+        if re.match(r'^\|[\s:\-|]+\|$', stripped):
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        data_rows.append(cells)
 
     if not data_rows:
         return
@@ -336,6 +363,8 @@ def _add_ki_table(doc: Document, raw_rows: list[str],
             photos = eintrag_fotos.get(int(nr_match.group(1)), [])
 
         row = tbl.add_row()
+        # Zeile darf nicht über zwei Seiten gehen
+        _set_row_cant_split(row)
 
         for idx in range(n_cols):
             cell = row.cells[idx]
@@ -354,8 +383,8 @@ def _add_ki_table(doc: Document, raw_rows: list[str],
                 run.font.size = Pt(9.5)
                 run.bold = True
             elif idx == 1:
-                # Details-Spalte mit Label-Formatierung
-                _add_detail_cell_content(para, src)
+                # Details-Spalte: jedes Label in eigenem Absatz
+                _add_detail_cell_content(cell, src)
             elif idx == 2:
                 # Bild-Spalte – echte Fotos
                 _add_bild_cell(cell, photos)
