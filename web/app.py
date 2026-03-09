@@ -16,6 +16,7 @@ import config
 from db.database import get_session
 from db.models import Projekt, Benutzer, Eintrag, Foto, Tagesbericht
 from core.pdf import generiere_pdf
+from core.docx_export import generiere_docx
 from core.ki import generiere_bericht_text
 
 logger = logging.getLogger(__name__)
@@ -212,15 +213,17 @@ async def projekt_detail(
             .order_by(Tagesbericht.datum.desc())
             .all()
         )
-        berichte_daten = [
-            {
+        berichte_daten = []
+        for b in berichte:
+            pdf_pfad = b.pdf_pfad or ""
+            docx_pfad = pdf_pfad.replace(".pdf", ".docx") if pdf_pfad else ""
+            berichte_daten.append({
                 "id": b.id,
                 "datum": b.datum.strftime("%d.%m.%Y") if b.datum else "",
-                "pdf_pfad": b.pdf_pfad,
-                "hat_pdf": bool(b.pdf_pfad and os.path.exists(b.pdf_pfad)),
-            }
-            for b in berichte
-        ]
+                "pdf_pfad": pdf_pfad,
+                "hat_pdf": bool(pdf_pfad and os.path.exists(pdf_pfad)),
+                "hat_docx": bool(docx_pfad and os.path.exists(docx_pfad)),
+            })
 
         # Verfügbare Daten für Filter
         daten = (
@@ -369,6 +372,19 @@ async def bericht_generieren(
         logger.error(f"PDF-Erstellung fehlgeschlagen: {e}")
         return HTMLResponse(f"<h1>Fehler bei PDF-Erstellung</h1><p>{e}</p>", status_code=500)
 
+    # DOCX generieren
+    try:
+        generiere_docx(
+            projekt_name=projekt_name,
+            bauleiter_name=bauleiter_name,
+            datum=berichtsdatum,
+            eintraege_text=eintraege_text,
+            fotos=fotos,
+            ki_bericht=ki_bericht,
+        )
+    except Exception as e:
+        logger.warning(f"DOCX-Erstellung fehlgeschlagen (nicht kritisch): {e}")
+
     # PDF-Pfad in DB speichern
     with get_session() as session:
         tb = (
@@ -402,6 +418,25 @@ async def bericht_download(bericht_id: int, auth=Depends(auth_pruefen)):
         pdf_pfad,
         media_type="application/pdf",
         filename=os.path.basename(pdf_pfad),
+    )
+
+
+@app.get("/bericht/{bericht_id}/download/docx")
+async def bericht_download_docx(bericht_id: int, auth=Depends(auth_pruefen)):
+    """Word-Tagesbericht (DOCX) herunterladen."""
+    with get_session() as session:
+        bericht = session.query(Tagesbericht).get(bericht_id)
+        if not bericht or not bericht.pdf_pfad:
+            return HTMLResponse("<h1>Bericht nicht gefunden</h1>", status_code=404)
+        docx_pfad = bericht.pdf_pfad.replace(".pdf", ".docx")
+
+    if not os.path.exists(docx_pfad):
+        return HTMLResponse("<h1>Word-Datei nicht gefunden. Bitte Bericht neu generieren.</h1>", status_code=404)
+
+    return FileResponse(
+        docx_pfad,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        filename=os.path.basename(docx_pfad),
     )
 
 

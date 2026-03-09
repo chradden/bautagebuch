@@ -186,6 +186,11 @@
                     {% else %}
                     <span class="text-muted">PDF nicht verfügbar</span>
                     {% endif %}
+                    {% if b.hat_docx %}
+                    <a href="/bericht/{{ b.id }}/download/docx" class="btn btn-secondary">
+                        📝 Word herunterladen
+                    </a>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>

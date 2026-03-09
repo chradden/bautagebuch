@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 
-# System-Dependencies für WeasyPrint
+# System-Dependencies für WeasyPrint + python-docx (lxml)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 \
     libpangocairo-1.0-0 \
@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgdk-pixbuf-xlib-2.0-0 \
     libffi-dev \
     shared-mime-info \
+    libxml2-dev \
+    libxslt-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
