@@ -563,7 +563,8 @@ def _render_ki_bericht(doc: Document, markdown_text: str,
         if stripped.startswith("|") and i + 1 < len(lines):
             next_stripped = lines[i + 1].strip()
             if re.match(r'^\|[-| :]+\|', next_stripped):
-                # Tabelle sammeln – Leerzeilen innerhalb der Tabelle überspringen
+                # Tabelle sammeln – beliebig viele Leerzeilen überspringen,
+                # bis eine Nicht-Pipe-Nicht-Leer-Zeile kommt
                 table_rows = [stripped]
                 i += 1
                 while i < len(lines):
@@ -572,9 +573,12 @@ def _render_ki_bericht(doc: Document, markdown_text: str,
                         table_rows.append(line)
                         i += 1
                     elif not line:
-                        # Leerzeile: weiterlesen falls danach noch eine |–Zeile kommt
-                        if i + 1 < len(lines) and lines[i + 1].strip().startswith("|"):
-                            i += 1  # Leerzeile überspringen
+                        # Leerzeile: vorwärts schauen ob noch eine Tabellenzeile kommt
+                        lookahead = i + 1
+                        while lookahead < len(lines) and not lines[lookahead].strip():
+                            lookahead += 1
+                        if lookahead < len(lines) and lines[lookahead].strip().startswith("|"):
+                            i = lookahead  # alle Leerzeilen überspringen
                         else:
                             break
                     else:

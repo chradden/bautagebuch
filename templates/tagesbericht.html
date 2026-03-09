@@ -83,9 +83,11 @@
         }
         .ki-bericht table {
             width: 100%;
+            max-width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
             margin: 0;
+            box-sizing: border-box;
         }
         .ki-bericht thead {
             display: table-header-group;
@@ -110,6 +112,7 @@
             word-wrap: break-word;
             overflow-wrap: anywhere;
             min-width: 0;
+            max-width: 0;
         }
         .ki-bericht td.details-col {
             line-height: 1.45;
@@ -144,7 +147,6 @@
             margin-bottom: 16px;
             border: 1px solid #d7dee7;
             border-radius: 8px;
-            overflow: hidden;
             page-break-inside: auto;
             break-inside: auto;
         }
