@@ -1,8 +1,10 @@
 """Word-Dokument (DOCX) – layout-getreu zum PDF-Bericht (tagesbericht.html)."""
+import io
 import os
 import re
 from datetime import date, datetime
 
+from PIL import Image as PilImage
 from docx import Document
 from docx.shared import Pt, Cm, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -53,6 +55,61 @@ _COL_WIDTHS = [Cm(2.2), Cm(8.7), Cm(7.1), Cm(9.3)]
 
 # Labels wie im PDF Detail-Block
 _DETAIL_LABELS = ["Zustand", "Problem", "Maßnahme", "Dringlichkeit", "Kostenschätzung"]
+
+# Einheitliche Bildgröße im DOCX-Bericht (max Breite × max Höhe in cm)
+_IMG_MAX_W_CM = 5.0
+_IMG_MAX_H_CM = 4.0
+
+
+def _prepare_image(path: str) -> tuple[io.BytesIO, float, float] | None:
+    """
+    Öffnet ein Bild, skaliert es auf max _IMG_MAX_W_CM × _IMG_MAX_H_CM,
+    gibt (BytesIO-JPEG, breite_cm, höhe_cm) zurück oder None bei Fehler.
+    """
+    try:
+        with PilImage.open(path) as img:
+            # EXIF-Rotation berücksichtigen
+            try:
+                from PIL.ExifTags import TAGS
+                exif = img._getexif()
+                if exif:
+                    for tag_id, val in exif.items():
+                        if TAGS.get(tag_id) == "Orientation":
+                            if val == 3:
+                                img = img.rotate(180, expand=True)
+                            elif val == 6:
+                                img = img.rotate(270, expand=True)
+                            elif val == 8:
+                                img = img.rotate(90, expand=True)
+                            break
+            except Exception:
+                pass
+
+            orig_w, orig_h = img.size
+            # Umrechnung cm → Pixel bei 96 dpi
+            dpi = 96
+            max_w_px = int(_IMG_MAX_W_CM / 2.54 * dpi)
+            max_h_px = int(_IMG_MAX_H_CM / 2.54 * dpi)
+
+            scale = min(max_w_px / orig_w, max_h_px / orig_h, 1.0)
+            new_w = max(1, int(orig_w * scale))
+            new_h = max(1, int(orig_h * scale))
+
+            img_resized = img.resize((new_w, new_h), PilImage.LANCZOS)
+            if img_resized.mode not in ("RGB", "L"):
+                img_resized = img_resized.convert("RGB")
+
+            buf = io.BytesIO()
+            img_resized.save(buf, format="JPEG", quality=82, optimize=True)
+            buf.seek(0)
+
+            w_cm = new_w / dpi * 2.54
+            h_cm = new_h / dpi * 2.54
+            return buf, w_cm, h_cm
+    except Exception:
+        return None
+
+
 
 # ── XML-Hilfsfunktionen ────────────────────────────────────────────────────
 
@@ -247,20 +304,26 @@ def _add_bild_cell(cell, photos: list[dict]) -> None:
         path = foto.get("dateipfad_abs", "")
         if not path or not os.path.exists(path):
             continue
+
+        prepared = _prepare_image(path)
+
         para = cell.paragraphs[0] if first else cell.add_paragraph()
         first = False
-        # Label "Bild 1", "Bild 2" etc.
         r_label = para.add_run(f"Bild {idx}")
         r_label.bold = True
         r_label.font.size = Pt(8)
         r_label.font.color.rgb = _C_DARK_RGB
         _set_para_spacing(para, before=0, after=4)
-        # Foto in neuer Zeile – einheitliche Breite 5 cm
+
         img_para = cell.add_paragraph()
         _set_para_spacing(img_para, before=0, after=20)
-        try:
-            img_para.add_run().add_picture(path, width=Cm(5.0))
-        except Exception:
+        if prepared:
+            buf, w_cm, h_cm = prepared
+            try:
+                img_para.add_run().add_picture(buf, width=Cm(w_cm), height=Cm(h_cm))
+            except Exception:
+                img_para.add_run("[Bild nicht verfügbar]").font.size = Pt(8)
+        else:
             img_para.add_run("[Bild nicht verfügbar]").font.size = Pt(8)
 
 
