@@ -130,18 +130,24 @@ Strukturiere den Bericht in diese Abschnitte (nur wenn passende Daten vorhanden)
 1. **🔴 Sofortmaßnahmen (Priorität ROT)** – Sicherheitsrelevant, sofort handeln
 2. **🟡 Zeitnaher Handlungsbedarf (Priorität GELB)** – Bald beheben
 3. **🟢 Geplante Maßnahmen (Priorität GRÜN)** – Kann eingeplant werden
-4. **Kostenschätzung** – Übersicht der geschätzten Kosten
-5. **Empfehlungen** – Konkrete Handlungsempfehlungen und nächste Schritte
+
+WICHTIG – AUSGABEFORMAT: Jeder Abschnitt MUSS eine Markdown-Tabelle enthalten mit EXAKT diesen 4 Spalten:
+
+| Eintrag | Details | Bild | Bildbeschreibung |
+|---------|---------|------|-----------------|
+| Nr. X - Kurztitel | Zustand: ... **Problem:** ... **Maßnahme:** ... **Dringlichkeit:** ... **Kostenschätzung:** ... | | |
 
 Regeln:
 - Schreibe in professionellem, sachlichem Stil
-- Gruppiere nach Priorität (rot → gelb → grün)
+- Jeder Eintrag erscheint als EINE Tabellenzeile in der passenden Prioritätsspalte
+- Die Spalten "Bild" und "Bildbeschreibung" bleiben IMMER leer (werden automatisch befüllt)
+- "Nr. X" MUSS die Originalentragnummer aus den Eingabedaten sein (z.B. Nr. 1, Nr. 2)
 - Behalte wichtige Details (Maße, Materialien, Ortsangaben)
 - Verwende EXAKT die Kostenschätzungen aus den Einträgen – erfinde keine eigenen Zahlen
-- Nutze Aufzählungspunkte (mit Spiegelstrich -)
 - Erfinde KEINE Informationen – nur was in den Einträgen steht
-- Nutze Markdown-Formatierung: **fett** für Überschriften, - für Listen
 - Antworte auf Deutsch
+
+Nach den Tabellen: Füge einen Abschnitt **## Empfehlungen** mit konkreten nächsten Schritten als Aufzählung hinzu.
 
 Einträge des Tages:
 {eintraege}"""

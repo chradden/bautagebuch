@@ -177,7 +177,7 @@ def _inject_entry_photos(html_content: str, eintrag_fotos: dict[int, list[dict]]
             return row_html
 
         cell_text = re.sub(r'<.*?>', '', cells[0])
-        nr_match = re.search(r'Nr\.\s*(\d+)', cell_text)
+        nr_match = re.search(r'Nr\.?\s*(\d+)', cell_text)
         photos = []
         if nr_match:
             photos = eintrag_fotos.get(int(nr_match.group(1)), [])

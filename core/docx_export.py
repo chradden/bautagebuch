@@ -330,7 +330,7 @@ def _add_ki_table(doc: Document, raw_rows: list[str],
     # ── Daten-Zeilen ──────────────────────────────────────────────────
     for row_cells in data_rows:
         entry_text = row_cells[0] if row_cells else ""
-        nr_match = re.search(r'Nr\.\s*(\d+)', entry_text)
+        nr_match = re.search(r'Nr\.?\s*(\d+)', entry_text)
         photos = []
         if nr_match and eintrag_fotos:
             photos = eintrag_fotos.get(int(nr_match.group(1)), [])
