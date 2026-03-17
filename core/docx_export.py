@@ -1,8 +1,11 @@
 """Word-Dokument (DOCX) – layout-getreu zum PDF-Bericht (tagesbericht.html)."""
 import io
+import logging
 import os
 import re
 from datetime import date, datetime
+
+logger = logging.getLogger(__name__)
 
 from PIL import Image as PilImage
 from docx import Document
@@ -694,22 +697,69 @@ def _render_ki_bericht(doc: Document, markdown_text: str,
     if eintrag_fotos:
         all_nrs = set(eintrag_fotos.keys())
         missing = sorted(all_nrs - rendered_nrs)
+        logger.info(
+            "DOCX rendered_nrs=%s  all_nrs=%s  missing=%s",
+            sorted(rendered_nrs), sorted(all_nrs), missing,
+        )
         if missing:
-            # Synthetische Markdown-Zeilen für fehlende Einträge erzeugen
-            synthetic_rows = [
-                "| Eintrag | Details | Bild | Bildbeschreibung |",
-                "|---------|---------|------|-----------------|",
-            ]
+            # Direkt DOCX-Tabelle bauen (kein Umweg über Markdown-Parsing)
+            n_cols = 4
+            tbl = doc.add_table(rows=0, cols=n_cols)
+            tbl.style = "Table Grid"
+
+            # Header
+            hdr = tbl.add_row()
+            for ci, title in enumerate(
+                ["Eintrag", "Details", "Bild", "Bildbeschreibung"]
+            ):
+                cell = hdr.cells[ci]
+                _set_cell_bg(cell, _C_TH_BG)
+                _set_cell_borders(cell)
+                p = cell.paragraphs[0]
+                r = p.add_run(title)
+                r.bold = True
+                r.font.size = Pt(9.5)
+                r.font.color.rgb = _C_TH_TEXT
+                p.paragraph_format.left_indent = Cm(0.15)
+                _set_para_spacing(p, before=30, after=30)
+
+            # Datenzeilen
             for nr in missing:
+                photos = eintrag_fotos.get(nr, [])
                 idx = nr - 1
                 detail = ""
                 if idx < len(eintraege_text):
                     e = eintraege_text[idx]
                     detail = (getattr(e, 'ki_zusammenfassung', '')
                               or getattr(e, 'rohinhalt', '') or '')
-                    detail = detail.replace("|", "/").replace("\n", " ")
-                synthetic_rows.append(f"| Nr. {nr} | {detail} | | |")
-            rendered_nrs |= _add_ki_table(doc, synthetic_rows, None, eintrag_fotos)
+
+                row = tbl.add_row()
+                _set_row_cant_split(row)
+                for ci in range(n_cols):
+                    cell = row.cells[ci]
+                    _set_cell_borders(cell)
+                    p = cell.paragraphs[0]
+                    p.paragraph_format.left_indent = Cm(0.15)
+                    _set_para_spacing(p, before=30, after=30)
+                    if ci == 0:
+                        r = p.add_run(f"Nr. {nr}")
+                        r.font.size = Pt(9.5)
+                        r.bold = True
+                    elif ci == 1:
+                        _add_detail_cell_content(cell, detail)
+                    elif ci == 2:
+                        _add_bild_cell(cell, photos)
+                    elif ci == 3:
+                        _add_bildbeschreibung_cell(cell, photos)
+
+            # Spaltenbreiten
+            for row in tbl.rows:
+                for ci, w in enumerate(_COL_WIDTHS):
+                    row.cells[ci].width = w
+
+            gap = doc.add_paragraph()
+            _set_para_spacing(gap, before=0, after=60)
+            rendered_nrs |= set(missing)
 
 def _add_kosten_box(doc: Document, gesamt: str) -> None:
     tbl = doc.add_table(rows=1, cols=1)

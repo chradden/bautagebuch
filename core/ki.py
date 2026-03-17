@@ -8,7 +8,7 @@ import config
 
 logger = logging.getLogger(__name__)
 
-client = OpenAI(api_key=config.OPENAI_API_KEY)
+client = OpenAI(api_key=config.OPENAI_API_KEY) if config.OPENAI_API_KEY else None
 
 # ─── Eintrag kategorisieren & bewerten ────────────────────────────────────
 
@@ -127,6 +127,7 @@ def beschreibe_foto(dateipfad: str) -> str:
 BERICHT_PROMPT = """Du bist ein professioneller Assistent für Instandhaltungsplanung. Erstelle aus den folgenden {anzahl} Einträgen einen strukturierten Instandhaltungsbericht.
 
 ALLE {anzahl} Einträge (Nr. 1 bis Nr. {anzahl}) MÜSSEN jeweils als eigene Tabellenzeile erscheinen. KEINEN Eintrag auslassen oder zusammenfassen!
+Auch Einträge OHNE erkennbare Schäden oder Mängel MÜSSEN als eigene Zeile aufgenommen werden – dort Zustand als "gut" oder "keine Mängel" dokumentieren.
 
 Strukturiere den Bericht in diese Abschnitte (nur wenn passende Daten vorhanden):
 1. **🔴 Sofortmaßnahmen (Priorität ROT)** – Sicherheitsrelevant, sofort handeln
@@ -140,7 +141,8 @@ WICHTIG – AUSGABEFORMAT: Jeder Abschnitt MUSS eine Markdown-Tabelle enthalten 
 | Nr. X - Kurztitel | Zustand: ... **Problem:** ... **Maßnahme:** ... **Dringlichkeit:** ... **Kostenschätzung:** ... | | |
 
 Regeln:
-- ALLE {anzahl} Einträge MÜSSEN vorkommen – jeder als eigene Tabellenzeile
+- ALLE {anzahl} Einträge MÜSSEN vorkommen – jeder als eigene Tabellenzeile (auch schadensfreie!)
+- Einträge ohne Mängel bekommen Priorität GRÜN und Zustand "Gut / Keine Mängel erkennbar"
 - Schreibe in professionellem, sachlichem Stil
 - Die Spalten "Bild" und "Bildbeschreibung" bleiben IMMER leer (werden automatisch befüllt)
 - "Nr. X" MUSS die Originalentragnummer aus den Eingabedaten sein (z.B. Nr. 1, Nr. 2)

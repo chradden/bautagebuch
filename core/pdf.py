@@ -1,4 +1,5 @@
 """PDF-Generierung für Tagesberichte."""
+import logging
 import os
 import re
 import html
@@ -8,6 +9,8 @@ from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 
 import config
+
+logger = logging.getLogger(__name__)
 
 # Jinja2 Template-Umgebung
 TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates")
@@ -224,17 +227,22 @@ def _add_missing_entries_html(
     if not eintrag_fotos:
         return html_content
 
-    # Nur Nr. X in Tabellenzellen (<td>) zählen, nicht in Fließtext/Empfehlungen
+    # Nur Nr. X in der Eintrag-Spalte (class="entry-col") zählen,
+    # NICHT in Details-/Bild-Spalten oder Fließtext/Empfehlungen.
     found_nrs = set(
         int(m.group(1))
         for m in re.finditer(
-            r'<td[^>]*>.*?Nr\.?\s*(\d+).*?</td>',
+            r'<td\s+class="entry-col"[^>]*>[^<]*?Nr\.?\s*(\d+)',
             html_content,
-            re.DOTALL | re.IGNORECASE,
+            re.IGNORECASE,
         )
     )
     all_nrs = set(eintrag_fotos.keys())
     missing = sorted(all_nrs - found_nrs)
+    logger.info(
+        "PDF found_nrs=%s  all_nrs=%s  missing=%s",
+        sorted(found_nrs), sorted(all_nrs), missing,
+    )
     if not missing:
         return html_content
 
