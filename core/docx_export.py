@@ -436,6 +436,9 @@ def _add_ki_table(doc: Document, raw_rows: list[str],
             nr_int = int(nr_match.group(1))
             rendered.add(nr_int)
             photos = eintrag_fotos.get(nr_int, [])
+            logger.info("DOCX _add_ki_table: Nr.%d → %d Fotos", nr_int, len(photos))
+        else:
+            logger.info("DOCX _add_ki_table: Zeile ohne Nr. → '%s'", entry_text[:40])
 
         row = tbl.add_row()
         # Zeile darf nicht über zwei Seiten gehen
@@ -893,6 +896,14 @@ def generiere_docx(
 
     # Foto-Map aufbauen (Eintragsnummer → Fotos)
     eintrag_fotos = _build_eintrag_foto_map(eintraege_text)
+    logger.info(
+        "DOCX generiere_docx: %d Einträge, eintrag_fotos keys=%s, ki_bericht=%d Zeichen",
+        len(eintraege_text), sorted(eintrag_fotos.keys()),
+        len(ki_bericht) if ki_bericht else 0,
+    )
+    for nr, fotos in sorted(eintrag_fotos.items()):
+        logger.info("  eintrag_fotos[%d]: %d Fotos → %s", nr, len(fotos),
+                    [f.get('dateipfad_abs', '?')[-40:] for f in fotos])
 
     # 1. Header
     _add_report_header(doc, projekt_name, projekt_adresse, datum, bauleiter_name)
@@ -900,6 +911,7 @@ def generiere_docx(
     # 2. KI-Analyse mit Tabellen und Fotos
     if ki_bericht:
         _add_section_header(doc, "KI-Analyse & Priorisierung")
+        logger.info("DOCX ki_bericht (erste 500 Zeichen): %s", ki_bericht[:500])
         _render_ki_bericht(doc, ki_bericht, eintrag_fotos, eintraege_text)
 
         gesamt = _build_total_cost_estimate(eintraege_text)

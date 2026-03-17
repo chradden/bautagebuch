@@ -382,7 +382,9 @@ async def bericht_generieren(
 
     # DOCX generieren
     try:
-        generiere_docx(
+        logger.info("DOCX-Generierung startet: %d Einträge, ki_bericht=%d Zeichen",
+                    len(eintraege_text), len(ki_bericht) if ki_bericht else 0)
+        docx_result = generiere_docx(
             projekt_name=projekt_name,
             bauleiter_name=bauleiter_name,
             datum=berichtsdatum,
@@ -390,8 +392,9 @@ async def bericht_generieren(
             fotos=fotos,
             ki_bericht=ki_bericht,
         )
+        logger.info("DOCX erfolgreich generiert: %s", docx_result)
     except Exception as e:
-        logger.warning(f"DOCX-Erstellung fehlgeschlagen (nicht kritisch): {e}")
+        logger.error("DOCX-Erstellung fehlgeschlagen: %s", e, exc_info=True)
 
     # PDF-Pfad in DB speichern
     with get_session() as session:
