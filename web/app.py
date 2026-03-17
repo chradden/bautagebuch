@@ -280,6 +280,7 @@ async def bericht_generieren(
             return HTMLResponse("<h1>Projekt nicht gefunden</h1>", status_code=404)
 
         projekt_name = projekt.name
+        projekt_adresse = projekt.adresse or ""
 
         # Einträge für dieses Datum laden
         eintraege = (
@@ -375,6 +376,7 @@ async def bericht_generieren(
             eintraege_text=eintraege_text,
             fotos=fotos,
             ki_bericht=ki_bericht,
+            projekt_adresse=projekt_adresse,
         )
     except Exception as e:
         logger.error(f"PDF-Erstellung fehlgeschlagen: {e}")
@@ -391,6 +393,7 @@ async def bericht_generieren(
             eintraege_text=eintraege_text,
             fotos=fotos,
             ki_bericht=ki_bericht,
+            projekt_adresse=projekt_adresse,
         )
         logger.info("DOCX erfolgreich generiert: %s", docx_result)
     except Exception as e:
