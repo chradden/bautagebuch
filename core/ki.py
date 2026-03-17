@@ -124,7 +124,9 @@ def beschreibe_foto(dateipfad: str) -> str:
 
 # ─── Tagesbericht generieren ─────────────────────────────────────────────
 
-BERICHT_PROMPT = """Du bist ein professioneller Assistent für Instandhaltungsplanung. Erstelle aus den folgenden Einträgen einen strukturierten Instandhaltungsbericht.
+BERICHT_PROMPT = """Du bist ein professioneller Assistent für Instandhaltungsplanung. Erstelle aus den folgenden {anzahl} Einträgen einen strukturierten Instandhaltungsbericht.
+
+ALLE {anzahl} Einträge (Nr. 1 bis Nr. {anzahl}) MÜSSEN jeweils als eigene Tabellenzeile erscheinen. KEINEN Eintrag auslassen oder zusammenfassen!
 
 Strukturiere den Bericht in diese Abschnitte (nur wenn passende Daten vorhanden):
 1. **🔴 Sofortmaßnahmen (Priorität ROT)** – Sicherheitsrelevant, sofort handeln
@@ -138,15 +140,16 @@ WICHTIG – AUSGABEFORMAT: Jeder Abschnitt MUSS eine Markdown-Tabelle enthalten 
 | Nr. X - Kurztitel | Zustand: ... **Problem:** ... **Maßnahme:** ... **Dringlichkeit:** ... **Kostenschätzung:** ... | | |
 
 Regeln:
+- ALLE {anzahl} Einträge MÜSSEN vorkommen – jeder als eigene Tabellenzeile
 - Schreibe in professionellem, sachlichem Stil
-- Jeder Eintrag erscheint als EINE Tabellenzeile in der passenden Prioritätsspalte
 - Die Spalten "Bild" und "Bildbeschreibung" bleiben IMMER leer (werden automatisch befüllt)
 - "Nr. X" MUSS die Originalentragnummer aus den Eingabedaten sein (z.B. Nr. 1, Nr. 2)
+- Keine leeren Tabellenzeilen. Kein Abschnitt ohne Einträge.
 - Behalte wichtige Details (Maße, Materialien, Ortsangaben)
 - Verwende EXAKT die Kostenschätzungen aus den Einträgen – erfinde keine eigenen Zahlen
 - Erfinde KEINE Informationen – nur was in den Einträgen steht
 - Antworte auf Deutsch
-- KRITISCH: Jede Tabellenzeile MUSS vollständig auf EINER einzigen Zeile stehen. Kein Zeilenumbruch innerhalb einer Tabellenzelle. Alle Details (Zustand, Problem, Maßnahme, Dringlichkeit, Kostenschätzung) hintereinander in einer Zeile.
+- KRITISCH: Jede Tabellenzeile MUSS vollständig auf EINER einzigen Zeile stehen. Kein Zeilenumbruch innerhalb einer Tabellenzelle.
 
 Nach den Tabellen: Füge einen Abschnitt **## Empfehlungen** mit konkreten nächsten Schritten als Aufzählung hinzu.
 

@@ -224,8 +224,14 @@ def _add_missing_entries_html(
     if not eintrag_fotos:
         return html_content
 
+    # Nur Nr. X in Tabellenzellen (<td>) zählen, nicht in Fließtext/Empfehlungen
     found_nrs = set(
-        int(m.group(1)) for m in re.finditer(r'Nr\.?\s*(\d+)', html_content)
+        int(m.group(1))
+        for m in re.finditer(
+            r'<td[^>]*>.*?Nr\.?\s*(\d+).*?</td>',
+            html_content,
+            re.DOTALL | re.IGNORECASE,
+        )
     )
     all_nrs = set(eintrag_fotos.keys())
     missing = sorted(all_nrs - found_nrs)

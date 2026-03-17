@@ -391,8 +391,11 @@ def _add_ki_table(doc: Document, raw_rows: list[str],
             ]
         data_rows.append(cells)
 
+    # Leere Zeilen (alle Zellen leer) entfernen
+    data_rows = [r for r in data_rows if any(c.strip() for c in r)]
+
     if not data_rows:
-        return
+        return rendered
 
     # Immer 4 Spalten: Eintrag | Details | Bild | Bildbeschreibung
     n_cols = 4
