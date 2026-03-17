@@ -570,6 +570,73 @@ def _render_ki_bericht(doc: Document, markdown_text: str,
     current_prio: str | None = None
     lines = markdown_text.splitlines()
     i = 0
+    fallback_inserted = False
+
+    def _insert_missing_entries():
+        """Fehlende Einträge als Tabelle einfügen (vor Empfehlungen)."""
+        nonlocal fallback_inserted, rendered_nrs
+        if fallback_inserted or not eintrag_fotos:
+            return
+        all_nrs = set(eintrag_fotos.keys())
+        missing = sorted(all_nrs - rendered_nrs)
+        logger.info(
+            "DOCX rendered_nrs=%s  all_nrs=%s  missing=%s",
+            sorted(rendered_nrs), sorted(all_nrs), missing,
+        )
+        if not missing:
+            fallback_inserted = True
+            return
+        # Direkt DOCX-Tabelle bauen
+        n_cols = 4
+        tbl = doc.add_table(rows=0, cols=n_cols)
+        tbl.style = "Table Grid"
+        hdr = tbl.add_row()
+        for ci, title in enumerate(
+            ["Eintrag", "Details", "Bild", "Bildbeschreibung"]
+        ):
+            cell = hdr.cells[ci]
+            _set_cell_bg(cell, _C_TH_BG)
+            _set_cell_borders(cell)
+            p = cell.paragraphs[0]
+            r = p.add_run(title)
+            r.bold = True
+            r.font.size = Pt(9.5)
+            r.font.color.rgb = _C_TH_TEXT
+            p.paragraph_format.left_indent = Cm(0.15)
+            _set_para_spacing(p, before=30, after=30)
+        for nr in missing:
+            photos = eintrag_fotos.get(nr, [])
+            idx = nr - 1
+            detail = ""
+            if idx < len(eintraege_text):
+                e = eintraege_text[idx]
+                detail = (getattr(e, 'ki_zusammenfassung', '')
+                          or getattr(e, 'rohinhalt', '') or '')
+            row = tbl.add_row()
+            _set_row_cant_split(row)
+            for ci in range(n_cols):
+                cell = row.cells[ci]
+                _set_cell_borders(cell)
+                p = cell.paragraphs[0]
+                p.paragraph_format.left_indent = Cm(0.15)
+                _set_para_spacing(p, before=30, after=30)
+                if ci == 0:
+                    r = p.add_run(f"Nr. {nr}")
+                    r.font.size = Pt(9.5)
+                    r.bold = True
+                elif ci == 1:
+                    _add_detail_cell_content(cell, detail)
+                elif ci == 2:
+                    _add_bild_cell(cell, photos)
+                elif ci == 3:
+                    _add_bildbeschreibung_cell(cell, photos)
+        for row in tbl.rows:
+            for ci, w in enumerate(_COL_WIDTHS):
+                row.cells[ci].width = w
+        gap = doc.add_paragraph()
+        _set_para_spacing(gap, before=0, after=60)
+        rendered_nrs |= set(missing)
+        fallback_inserted = True
 
     while i < len(lines):
         stripped = lines[i].strip()
@@ -632,6 +699,9 @@ def _render_ki_bericht(doc: Document, markdown_text: str,
         m = re.match(r'^## (.*)', stripped)
         if m:
             text = m.group(1)
+            # Vor "Empfehlungen" fehlende Einträge einfügen
+            if 'empfehlung' in text.lower():
+                _insert_missing_entries()
             current_prio = _detect_prio(text)
             colors = _PRIO.get(current_prio) if current_prio else None
             para = doc.add_paragraph()
@@ -696,73 +766,8 @@ def _render_ki_bericht(doc: Document, markdown_text: str,
         _set_para_spacing(para, before=20, after=20)
         i += 1
 
-    # ── Fehlende Einträge auffangen ───────────────────────────────────
-    if eintrag_fotos:
-        all_nrs = set(eintrag_fotos.keys())
-        missing = sorted(all_nrs - rendered_nrs)
-        logger.info(
-            "DOCX rendered_nrs=%s  all_nrs=%s  missing=%s",
-            sorted(rendered_nrs), sorted(all_nrs), missing,
-        )
-        if missing:
-            # Direkt DOCX-Tabelle bauen (kein Umweg über Markdown-Parsing)
-            n_cols = 4
-            tbl = doc.add_table(rows=0, cols=n_cols)
-            tbl.style = "Table Grid"
-
-            # Header
-            hdr = tbl.add_row()
-            for ci, title in enumerate(
-                ["Eintrag", "Details", "Bild", "Bildbeschreibung"]
-            ):
-                cell = hdr.cells[ci]
-                _set_cell_bg(cell, _C_TH_BG)
-                _set_cell_borders(cell)
-                p = cell.paragraphs[0]
-                r = p.add_run(title)
-                r.bold = True
-                r.font.size = Pt(9.5)
-                r.font.color.rgb = _C_TH_TEXT
-                p.paragraph_format.left_indent = Cm(0.15)
-                _set_para_spacing(p, before=30, after=30)
-
-            # Datenzeilen
-            for nr in missing:
-                photos = eintrag_fotos.get(nr, [])
-                idx = nr - 1
-                detail = ""
-                if idx < len(eintraege_text):
-                    e = eintraege_text[idx]
-                    detail = (getattr(e, 'ki_zusammenfassung', '')
-                              or getattr(e, 'rohinhalt', '') or '')
-
-                row = tbl.add_row()
-                _set_row_cant_split(row)
-                for ci in range(n_cols):
-                    cell = row.cells[ci]
-                    _set_cell_borders(cell)
-                    p = cell.paragraphs[0]
-                    p.paragraph_format.left_indent = Cm(0.15)
-                    _set_para_spacing(p, before=30, after=30)
-                    if ci == 0:
-                        r = p.add_run(f"Nr. {nr}")
-                        r.font.size = Pt(9.5)
-                        r.bold = True
-                    elif ci == 1:
-                        _add_detail_cell_content(cell, detail)
-                    elif ci == 2:
-                        _add_bild_cell(cell, photos)
-                    elif ci == 3:
-                        _add_bildbeschreibung_cell(cell, photos)
-
-            # Spaltenbreiten
-            for row in tbl.rows:
-                for ci, w in enumerate(_COL_WIDTHS):
-                    row.cells[ci].width = w
-
-            gap = doc.add_paragraph()
-            _set_para_spacing(gap, before=0, after=60)
-            rendered_nrs |= set(missing)
+    # ── Fehlende Einträge auffangen (falls kein Empfehlungs-Abschnitt kam) ──
+    _insert_missing_entries()
 
 def _add_kosten_box(doc: Document, gesamt: str) -> None:
     tbl = doc.add_table(rows=1, cols=1)
