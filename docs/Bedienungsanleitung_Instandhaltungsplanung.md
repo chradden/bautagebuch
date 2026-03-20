@@ -53,7 +53,7 @@ Sie brauchen keine zusätzliche App. Die Erfassung läuft direkt über Telegram.
 1. Öffnen Sie den Bot in Telegram.
 2. Tippen Sie auf Start oder senden Sie:
 
-```text
+```
 /start
 ```
 
@@ -70,13 +70,13 @@ Sie brauchen keine zusätzliche App. Die Erfassung läuft direkt über Telegram.
 
 Falls Ihr Name in Berichten angepasst werden soll, senden Sie:
 
-```text
+```
 /name Vorname Nachname
 ```
 
 Beispiel:
 
-```text
+```
 /name Max Mustermann
 ```
 
@@ -88,7 +88,7 @@ Bevor Sie Meldungen erfassen, legen Sie ein Projekt beziehungsweise Objekt an. A
 
 ### Befehl:
 
-```text
+```
 /projekt Neubau Rathaus
 ```
 
@@ -114,7 +114,7 @@ Sie können die Projektadresse automatisch aus Ihrem Standort übernehmen lassen
 1. Aktivieren Sie zuerst das gewünschte Projekt.
 2. Senden Sie den Befehl:
 
-```text
+```
 /standort
 ```
 
@@ -140,15 +140,15 @@ Jede normale Textnachricht wird als Eintrag zur Instandhaltungsdokumentation ges
 
 Beispiele:
 
-```text
+```
 Rissbildung an der Nordfassade im Bereich Fensterband 2. Obergeschoss.
 ```
 
-```text
+```
 Heizung im Technikraum ausgefallen, Vorlauf kalt, Ursache noch unklar.
 ```
 
-```text
+```
 Regenrinne an Halle B teilweise gelöst, Absturzgefahr fuer lose Teile.
 ```
 
@@ -213,7 +213,7 @@ Wenn die Beschreibung ausreichend klar ist, ergänzt der Bot eine grobe Kostensc
 
 Wenn Sie für mehrere Baustellen oder Objekte arbeiten, können Sie das aktive Projekt wechseln:
 
-```text
+```
 /wechsel
 ```
 
@@ -223,7 +223,7 @@ Der Bot zeigt dann eine Auswahlliste mit vorhandenen Projekten. Nach der Auswahl
 
 Mit diesem Befehl sehen Sie Ihr aktives Projekt und wie viele Meldungen heute erfasst wurden:
 
-```text
+```
 /status
 ```
 
@@ -246,13 +246,13 @@ Für das aktuell aktive Projekt können Sie jederzeit einen Tagesbericht erzeuge
 
 Für heute:
 
-```text
+```
 /bericht
 ```
 
 Für ein bestimmtes Datum:
 
-```text
+```
 /bericht 07.03.2026
 ```
 
@@ -277,13 +277,13 @@ Alle Einträge können Sie zusätzlich als CSV-Datei exportieren.
 
 Kompletter Export des aktiven Projekts:
 
-```text
+```
 /export
 ```
 
 Export für einen bestimmten Tag:
 
-```text
+```
 /export 07.03.2026
 ```
 
@@ -295,7 +295,7 @@ Der Export eignet sich gut für Excel, Auswertungen oder die Weitergabe an ander
 
 Neben dem Bot gibt es ein Web-Dashboard. Standardmäßig läuft es unter:
 
-```text
+```
 http://localhost:8093
 ```
 
@@ -383,13 +383,13 @@ Beispiel:
 
 Statt:
 
-```text
+```
 Fenster defekt.
 ```
 
 Besser:
 
-```text
+```
 Fenster im Besprechungsraum 2.12 schließt nicht mehr sauber, Zugluft deutlich spuerbar.
 ```
 

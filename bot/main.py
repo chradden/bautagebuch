@@ -1,7 +1,7 @@
 """Bautagebuch Telegram Bot – Hauptmodul."""
 import logging
 import traceback
-from telegram import Update
+from telegram import BotCommand, Update
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -81,7 +81,22 @@ def main():
     init_db()
 
     logger.info("Starte Bautagebuch-Bot...")
-    app = ApplicationBuilder().token(config.TELEGRAM_BOT_TOKEN).build()
+
+    async def post_init(application):
+        """Setzt das Befehlsmenü in Telegram nach dem Start."""
+        await application.bot.set_my_commands([
+            BotCommand("start", "Registrierung"),
+            BotCommand("projekt", "Neues Objekt/Projekt anlegen"),
+            BotCommand("wechsel", "Aktives Projekt wechseln"),
+            BotCommand("standort", "Adresse per Standort setzen"),
+            BotCommand("status", "Status & heutige Einträge"),
+            BotCommand("bericht", "PDF-Instandhaltungsbericht"),
+            BotCommand("export", "CSV-Export der Einträge"),
+            BotCommand("name", "Namen ändern"),
+            BotCommand("hilfe", "Befehlsübersicht"),
+        ])
+
+    app = ApplicationBuilder().token(config.TELEGRAM_BOT_TOKEN).post_init(post_init).build()
 
     # Debug-Logger für ALLE Updates (eigene Gruppe, läuft immer zuerst)
     app.add_handler(TypeHandler(Update, log_all_updates), group=-1)
