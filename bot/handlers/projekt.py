@@ -31,7 +31,7 @@ async def projekt_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Bitte zuerst /start ausführen.")
             return
 
-        projekt = Projekt(name=projektname)
+        projekt = Projekt(name=projektname, erstellt_von=benutzer.id)
         session.add(projekt)
         session.flush()  # ID generieren
 
@@ -58,11 +58,11 @@ async def wechsel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Bitte zuerst /start ausführen.")
             return
 
-        projekte = session.query(Projekt).all()
+        projekte = session.query(Projekt).filter_by(erstellt_von=benutzer.id).all()
 
         if not projekte:
             await update.message.reply_text(
-                "Noch keine Projekte vorhanden.\n"
+                "Du hast noch keine Projekte angelegt.\n"
                 "Erstelle eins mit /projekt <Name>"
             )
             return
@@ -87,7 +87,7 @@ async def projekt_auswahl_callback(update: Update, context: ContextTypes.DEFAULT
         benutzer = session.query(Benutzer).filter_by(telegram_id=telegram_id).first()
         projekt = session.get(Projekt, projekt_id)
 
-        if benutzer and projekt:
+        if benutzer and projekt and projekt.erstellt_von == benutzer.id:
             benutzer.aktives_projekt_id = projekt_id
             name = projekt.name
         else:

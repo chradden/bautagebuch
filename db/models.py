@@ -21,8 +21,10 @@ class Projekt(Base):
     bauherr = Column(String)
     baubeginn = Column(Date)
     ordner = Column(String, default="")  # Ordnername zur Sortierung
+    erstellt_von = Column(Integer, ForeignKey("benutzer.id"))  # Ersteller
     erstellt_am = Column(DateTime, default=datetime.now)
 
+    ersteller = relationship("Benutzer", foreign_keys=[erstellt_von])
     eintraege = relationship("Eintrag", back_populates="projekt")
     tagesberichte = relationship("Tagesbericht", back_populates="projekt")
 
@@ -37,7 +39,7 @@ class Benutzer(Base):
     aktives_projekt_id = Column(Integer, ForeignKey("projekte.id"))
     erstellt_am = Column(DateTime, default=datetime.now)
 
-    aktives_projekt = relationship("Projekt")
+    aktives_projekt = relationship("Projekt", foreign_keys=[aktives_projekt_id])
     eintraege = relationship("Eintrag", back_populates="benutzer")
 
 
