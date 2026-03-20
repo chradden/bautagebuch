@@ -60,16 +60,18 @@ async def wechsel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         projekte = session.query(Projekt).all()
 
-    if not projekte:
-        await update.message.reply_text(
-            "Noch keine Projekte vorhanden.\n"
-            "Erstelle eins mit /projekt <Name>"
-        )
-        return
+        if not projekte:
+            await update.message.reply_text(
+                "Noch keine Projekte vorhanden.\n"
+                "Erstelle eins mit /projekt <Name>"
+            )
+            return
+
+        keyboard = projekt_auswahl_keyboard(projekte)
 
     await update.message.reply_text(
         "Wähle ein Projekt:",
-        reply_markup=projekt_auswahl_keyboard(projekte)
+        reply_markup=keyboard
     )
 
 
@@ -83,7 +85,7 @@ async def projekt_auswahl_callback(update: Update, context: ContextTypes.DEFAULT
 
     with get_session() as session:
         benutzer = session.query(Benutzer).filter_by(telegram_id=telegram_id).first()
-        projekt = session.query(Projekt).get(projekt_id)
+        projekt = session.get(Projekt, projekt_id)
 
         if benutzer and projekt:
             benutzer.aktives_projekt_id = projekt_id
